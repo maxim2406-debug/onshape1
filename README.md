@@ -20,6 +20,10 @@
 ./gradlew assembleOfflineRelease   # release: R8 + shrinkResources, debuggable=false
 ```
 
+### Сборка на GitHub Actions
+
+Workflow `.github/workflows/android.yml` запускается на каждый push (и вручную: Actions → Android APK → Run workflow). Он собирает debug APK обеих сборок, проверяет, что в offline нет `INTERNET` (`aapt dump permissions`), затем гоняет юнит-тесты и lint. Готовые APK — в артефакте `ration-apk-<sha>` на странице запуска (Summary → Artifacts), отчёты — в `reports-<sha>`. Для телефона нужен файл `app-offline-debug.apk` (разрешить установку из неизвестных источников).
+
 Установка: `adb install app/build/outputs/apk/offline/debug/app-offline-debug.apk`.
 
 ### Сборки (product flavors)
