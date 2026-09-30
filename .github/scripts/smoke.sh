@@ -46,6 +46,23 @@ for route in today tomorrow shopping preps prep_checklist week health import lib
   if crashed; then echo "Падение на экране $route"; grep -A30 "FATAL EXCEPTION" smoke-logcat.txt; exit 1; fi
 done
 
+# Сценарий конструктора (12): Сегодня → Собрать из продуктов → + Продукт → выбор → Записать
+UI="python3 .github/scripts/ui.py"
+step() {
+  sleep 3
+  if crashed; then echo "Падение: $1"; grep -A40 "FATAL EXCEPTION" smoke-logcat.txt; exit 1; fi
+}
+adb shell am start -W -n "$ACT" --es route today > /dev/null; sleep 4
+$UI tap "Собрать из продуктов" || exit 1; step "открытие конструктора"
+$UI tap "+ Продукт" || exit 1; step "открытие выбора продукта"
+$UI tap "ккал ·" --contains || exit 1; step "выбор продукта в конструкторе"
+$UI has "Итог:" --contains || exit 1
+$UI tap "+ Продукт" || exit 1; step "повторное открытие выбора"
+$UI tap "ккал ·" --contains --index 2 || exit 1; step "выбор второго продукта"
+$UI tap "Записать" || exit 1; step "запись приёма из продуктов"
+$UI tap "Не нужно" || true; step "закрытие диалога своего блока"
+$UI tap "OK" || true; step "возврат из конструктора"
+
 # Нижняя навигация: вкладки открываются через маршруты today/… выше; проверяем ещё возврат и повторный запуск
 adb shell input keyevent KEYCODE_BACK; sleep 2
 adb shell am force-stop "$PKG"; sleep 1
