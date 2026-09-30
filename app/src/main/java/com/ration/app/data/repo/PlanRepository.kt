@@ -70,7 +70,8 @@ class PlanRepository @Inject constructor(
         return WeekCounters.of(db.meals().range(start, end), db.quick().range(start, end))
     }
 
-    suspend fun plannerInput(day: Long, plan: DayPlan, s: AppSettings = settings.current(), cat: CatalogData? = null): PlannerInput {
+    suspend fun plannerInput(day: Long, plan: DayPlan, settingsOverride: AppSettings? = null, cat: CatalogData? = null): PlannerInput {
+        val s = settingsOverride ?: settings.current()
         val c = cat ?: catalog()
         val today = today()
         val stock = db.stock().getAll()

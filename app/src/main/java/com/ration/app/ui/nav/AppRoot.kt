@@ -138,7 +138,7 @@ fun AppRoot(activity: MainActivity) {
             composable("settings") { SettingsScreen(nav) }
             composable("import") {
                 val shared by activity.sharedText
-                ImportScreen(nav, shared) { activity.sharedText.value = null }
+                ImportScreen(nav, shared, onSharedConsumed = { activity.sharedText.value = null })
             }
             composable("shopping") { ShoppingScreen(nav) }
             composable("prep_checklist") { PrepChecklistScreen(nav) }
