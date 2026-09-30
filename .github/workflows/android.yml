@@ -103,10 +103,14 @@ jobs:
 
       - name: Сборка версии 1.0.0 (БД v1) с тем же debug-ключом
         run: |
-          mkdir -p ~/.android && cp app/debug.keystore ~/.android/debug.keystore
           git fetch --depth=1 origin 5d542e3909b50245d7683def73381a0294d77778
           git worktree add "$RUNNER_TEMP/old" FETCH_HEAD
-          cd "$RUNNER_TEMP/old" && ./gradlew --no-daemon assembleOfflineDebug
+          cp app/debug.keystore "$RUNNER_TEMP/old/app/debug.keystore"
+          cd "$RUNNER_TEMP/old"
+          # та же подпись, что у новой сборки: иначе adb install -r отклонит обновление
+          perl -0pi -e 's/(buildTypes \{\s*debug \{)/signingConfigs { getByName("debug") { storeFile = file("debug.keystore"); storePassword = "android"; keyAlias = "androiddebugkey"; keyPassword = "android" } }\n    $1\n            signingConfig = signingConfigs.getByName("debug")/' app/build.gradle.kts
+          grep -q 'storeFile = file("debug.keystore")' app/build.gradle.kts
+          ./gradlew --no-daemon assembleOfflineDebug
           mkdir -p "$GITHUB_WORKSPACE/old-apk"
           cp app/build/outputs/apk/offline/debug/*.apk "$GITHUB_WORKSPACE/old-apk/"
 
