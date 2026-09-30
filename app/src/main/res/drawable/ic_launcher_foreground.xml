@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp" android:height="108dp"
+    android:viewportWidth="108" android:viewportHeight="108">
+    <!-- тарелка -->
+    <path android:fillColor="#FFFFFF"
+        android:pathData="M54,30a24,24 0,1 1,0 48a24,24 0,1 1,0 -48z" />
+    <path android:fillColor="#2E7D32"
+        android:pathData="M54,38a16,16 0,1 1,0 32a16,16 0,1 1,0 -32z" />
+    <!-- лист -->
+    <path android:fillColor="#FFFFFF"
+        android:pathData="M48,62C48,50 56,44 64,44C64,54 58,62 48,62z" />
+</vector>

@@ -1,0 +1,190 @@
+package com.ration.app.data.db.dao
+
+import androidx.room.Dao
+import androidx.room.Delete
+import androidx.room.Insert
+import androidx.room.OnConflictStrategy
+import androidx.room.Query
+import androidx.room.Update
+import androidx.room.Upsert
+import com.ration.app.data.db.entity.Block
+import com.ration.app.data.db.entity.BlockIngredient
+import com.ration.app.data.db.entity.BpLog
+import com.ration.app.data.db.entity.CustomFood
+import com.ration.app.data.db.entity.DayPlan
+import com.ration.app.data.db.entity.MealLog
+import com.ration.app.data.db.entity.PlannedSlot
+import com.ration.app.data.db.entity.Prep
+import com.ration.app.data.db.entity.PrepTemplate
+import com.ration.app.data.db.entity.Product
+import com.ration.app.data.db.entity.Purchase
+import com.ration.app.data.db.entity.PurchaseLine
+import com.ration.app.data.db.entity.QuickLog
+import com.ration.app.data.db.entity.StockItem
+import com.ration.app.data.db.entity.Substitution
+import com.ration.app.data.db.entity.WeightLog
+import kotlinx.coroutines.flow.Flow
+
+data class ProductTotal(val productId: Long, val total: Double)
+
+@Dao
+interface ProductDao {
+    @Query("SELECT * FROM product ORDER BY name") fun observeAll(): Flow<List<Product>>
+    @Query("SELECT * FROM product ORDER BY name") suspend fun getAll(): List<Product>
+    @Query("SELECT * FROM product WHERE id = :id") suspend fun get(id: Long): Product?
+    @Query("SELECT * FROM product WHERE `key` = :key") suspend fun byKey(key: String): Product?
+    @Query("SELECT COUNT(*) FROM product") suspend fun count(): Int
+    @Insert suspend fun insert(p: Product): Long
+    @Insert(onConflict = OnConflictStrategy.ABORT) suspend fun insertAll(list: List<Product>)
+    @Update suspend fun update(p: Product)
+    @Update suspend fun updateAll(list: List<Product>)
+}
+
+@Dao
+interface StockDao {
+    @Query("SELECT * FROM stock_item ORDER BY purchasedDay, id") fun observeAll(): Flow<List<StockItem>>
+    @Query("SELECT * FROM stock_item ORDER BY purchasedDay, id") suspend fun getAll(): List<StockItem>
+    @Query("SELECT * FROM stock_item WHERE productId = :productId ORDER BY purchasedDay, id") suspend fun forProduct(productId: Long): List<StockItem>
+    @Query("SELECT productId, SUM(qty) AS total FROM stock_item GROUP BY productId") suspend fun totals(): List<ProductTotal>
+    @Insert suspend fun insert(s: StockItem): Long
+    @Insert suspend fun insertAll(list: List<StockItem>)
+    @Update suspend fun updateAll(list: List<StockItem>)
+    @Query("DELETE FROM stock_item WHERE productId = :productId") suspend fun deleteForProduct(productId: Long)
+    @Query("DELETE FROM stock_item WHERE qty <= 0.000001 AND purchasedDay < :beforeDay") suspend fun purgeEmpty(beforeDay: Long)
+}
+
+@Dao
+interface PurchaseDao {
+    @Query("SELECT * FROM purchase ORDER BY day DESC, id DESC") fun observeAll(): Flow<List<Purchase>>
+    @Query("SELECT * FROM purchase") suspend fun getAll(): List<Purchase>
+    @Query("SELECT * FROM purchase_line") suspend fun getAllLines(): List<PurchaseLine>
+    @Query("SELECT * FROM purchase_line WHERE productId = :productId ORDER BY id DESC LIMIT 1") suspend fun lastLineFor(productId: Long): PurchaseLine?
+    @Insert suspend fun insert(p: Purchase): Long
+    @Insert suspend fun insertAll(list: List<Purchase>)
+    @Insert suspend fun insertLines(lines: List<PurchaseLine>)
+}
+
+@Dao
+interface BlockDao {
+    @Query("SELECT * FROM block ORDER BY kind, id") fun observeAll(): Flow<List<Block>>
+    @Query("SELECT * FROM block ORDER BY kind, id") suspend fun getAll(): List<Block>
+    @Query("SELECT * FROM block WHERE id = :id") suspend fun get(id: Long): Block?
+    @Query("SELECT * FROM block WHERE code = :code") suspend fun byCode(code: String): Block?
+    @Insert suspend fun insertAll(list: List<Block>)
+    @Update suspend fun update(b: Block)
+    @Query("SELECT * FROM block_ingredient ORDER BY blockId, id") suspend fun allIngredients(): List<BlockIngredient>
+    @Query("SELECT * FROM block_ingredient ORDER BY blockId, id") fun observeIngredients(): Flow<List<BlockIngredient>>
+    @Query("SELECT * FROM block_ingredient WHERE blockId = :blockId ORDER BY id") suspend fun ingredients(blockId: Long): List<BlockIngredient>
+    @Insert suspend fun insertIngredients(list: List<BlockIngredient>)
+    @Update suspend fun updateIngredient(i: BlockIngredient)
+}
+
+@Dao
+interface PrepDao {
+    @Query("SELECT * FROM prep_template ORDER BY id") fun observeTemplates(): Flow<List<PrepTemplate>>
+    @Query("SELECT * FROM prep_template ORDER BY id") suspend fun templates(): List<PrepTemplate>
+    @Insert suspend fun insertTemplates(list: List<PrepTemplate>)
+    @Update suspend fun updateTemplate(t: PrepTemplate)
+    @Query("SELECT * FROM prep WHERE discarded = 0 AND portionsLeft > 0.000001 ORDER BY expiresDay, id") fun observeActive(): Flow<List<Prep>>
+    @Query("SELECT * FROM prep ORDER BY expiresDay, id") suspend fun getAll(): List<Prep>
+    @Query("SELECT * FROM prep WHERE discarded = 0 AND portionsLeft > 0.000001 ORDER BY expiresDay, id") suspend fun active(): List<Prep>
+    @Insert suspend fun insert(p: Prep): Long
+    @Insert suspend fun insertAll(list: List<Prep>)
+    @Update suspend fun update(p: Prep)
+    @Update suspend fun updateAll(list: List<Prep>)
+}
+
+@Dao
+interface MealDao {
+    @Query("SELECT * FROM meal_log WHERE day = :day ORDER BY atMillis") fun observeDay(day: Long): Flow<List<MealLog>>
+    @Query("SELECT * FROM meal_log WHERE day = :day ORDER BY atMillis") suspend fun forDay(day: Long): List<MealLog>
+    @Query("SELECT * FROM meal_log WHERE day BETWEEN :from AND :to ORDER BY atMillis") suspend fun range(from: Long, to: Long): List<MealLog>
+    @Query("SELECT * FROM meal_log WHERE day BETWEEN :from AND :to ORDER BY atMillis") fun observeRange(from: Long, to: Long): Flow<List<MealLog>>
+    @Query("SELECT * FROM meal_log") suspend fun getAll(): List<MealLog>
+    @Query("SELECT * FROM meal_log WHERE id = :id") suspend fun get(id: Long): MealLog?
+    @Insert suspend fun insert(l: MealLog): Long
+    @Insert suspend fun insertAll(list: List<MealLog>)
+    @Delete suspend fun delete(l: MealLog)
+
+    @Query("SELECT * FROM custom_food ORDER BY name") fun observeFoods(): Flow<List<CustomFood>>
+    @Query("SELECT * FROM custom_food ORDER BY name") suspend fun foods(): List<CustomFood>
+    @Query("SELECT * FROM custom_food WHERE id = :id") suspend fun food(id: Long): CustomFood?
+    @Insert suspend fun insertFood(f: CustomFood): Long
+    @Insert suspend fun insertFoods(list: List<CustomFood>)
+
+    @Query("SELECT * FROM substitution") suspend fun substitutions(): List<Substitution>
+    @Query("SELECT * FROM substitution") fun observeSubstitutions(): Flow<List<Substitution>>
+    @Query("SELECT * FROM substitution WHERE blockId = :blockId AND (permanent = 1 OR day = :day)") suspend fun substitutionsFor(blockId: Long, day: Long): List<Substitution>
+    @Insert suspend fun insertSubstitution(s: Substitution): Long
+    @Insert suspend fun insertSubstitutions(list: List<Substitution>)
+    @Delete suspend fun deleteSubstitution(s: Substitution)
+}
+
+@Dao
+interface PlanDao {
+    @Query("SELECT * FROM day_plan WHERE day = :day") suspend fun dayPlan(day: Long): DayPlan?
+    @Query("SELECT * FROM day_plan WHERE day = :day") fun observeDayPlan(day: Long): Flow<DayPlan?>
+    @Query("SELECT * FROM day_plan") suspend fun allPlans(): List<DayPlan>
+    @Upsert suspend fun upsertPlan(p: DayPlan)
+    @Insert suspend fun insertPlans(list: List<DayPlan>)
+
+    @Query("SELECT * FROM planned_slot WHERE day = :day ORDER BY minuteOfDay") fun observeSlots(day: Long): Flow<List<PlannedSlot>>
+    @Query("SELECT * FROM planned_slot WHERE day = :day ORDER BY minuteOfDay") suspend fun slots(day: Long): List<PlannedSlot>
+    @Query("SELECT * FROM planned_slot WHERE day BETWEEN :from AND :to") suspend fun slotsRange(from: Long, to: Long): List<PlannedSlot>
+    @Query("SELECT * FROM planned_slot WHERE id = :id") suspend fun slot(id: Long): PlannedSlot?
+    @Query("SELECT * FROM planned_slot") suspend fun allSlots(): List<PlannedSlot>
+    @Insert suspend fun insertSlots(list: List<PlannedSlot>)
+    @Update suspend fun updateSlot(s: PlannedSlot)
+    @Update suspend fun updateSlots(list: List<PlannedSlot>)
+    @Query("DELETE FROM planned_slot WHERE day = :day") suspend fun deleteSlots(day: Long)
+}
+
+@Dao
+interface QuickDao {
+    @Query("SELECT * FROM quick_log WHERE day = :day ORDER BY atMillis") fun observeDay(day: Long): Flow<List<QuickLog>>
+    @Query("SELECT * FROM quick_log WHERE day = :day ORDER BY atMillis") suspend fun forDay(day: Long): List<QuickLog>
+    @Query("SELECT * FROM quick_log WHERE day BETWEEN :from AND :to") suspend fun range(from: Long, to: Long): List<QuickLog>
+    @Query("SELECT * FROM quick_log") suspend fun getAll(): List<QuickLog>
+    @Insert suspend fun insert(q: QuickLog): Long
+    @Insert suspend fun insertAll(list: List<QuickLog>)
+    @Delete suspend fun delete(q: QuickLog)
+}
+
+@Dao
+interface HealthDao {
+    @Query("SELECT * FROM weight_log ORDER BY day") fun observeWeights(): Flow<List<WeightLog>>
+    @Query("SELECT * FROM weight_log ORDER BY day") suspend fun weights(): List<WeightLog>
+    @Insert suspend fun insertWeight(w: WeightLog): Long
+    @Insert suspend fun insertWeights(list: List<WeightLog>)
+    @Delete suspend fun deleteWeight(w: WeightLog)
+    @Query("SELECT * FROM bp_log ORDER BY atMillis") fun observeBp(): Flow<List<BpLog>>
+    @Query("SELECT * FROM bp_log ORDER BY atMillis") suspend fun bp(): List<BpLog>
+    @Insert suspend fun insertBp(b: BpLog): Long
+    @Insert suspend fun insertBps(list: List<BpLog>)
+    @Delete suspend fun deleteBp(b: BpLog)
+}
+
+@Dao
+abstract class MaintenanceDao {
+    @Query("DELETE FROM product") abstract suspend fun products()
+    @Query("DELETE FROM stock_item") abstract suspend fun stock()
+    @Query("DELETE FROM purchase") abstract suspend fun purchases()
+    @Query("DELETE FROM purchase_line") abstract suspend fun purchaseLines()
+    @Query("DELETE FROM block") abstract suspend fun blocks()
+    @Query("DELETE FROM block_ingredient") abstract suspend fun blockIngredients()
+    @Query("DELETE FROM prep_template") abstract suspend fun prepTemplates()
+    @Query("DELETE FROM prep") abstract suspend fun preps()
+    @Query("DELETE FROM meal_log") abstract suspend fun mealLogs()
+    @Query("DELETE FROM custom_food") abstract suspend fun customFoods()
+    @Query("DELETE FROM substitution") abstract suspend fun substitutions()
+    @Query("DELETE FROM day_plan") abstract suspend fun dayPlans()
+    @Query("DELETE FROM planned_slot") abstract suspend fun plannedSlots()
+    @Query("DELETE FROM quick_log") abstract suspend fun quickLogs()
+    @Query("DELETE FROM weight_log") abstract suspend fun weights()
+    @Query("DELETE FROM bp_log") abstract suspend fun bp()
+
+    open suspend fun deleteEverything() {
+        products(); stock(); purchases(); purchaseLines(); blocks(); blockIngredients(); prepTemplates(); preps()
+        mealLogs(); customFoods(); substitutions(); dayPlans(); plannedSlots(); quickLogs(); weights(); bp()
+    }
+}
