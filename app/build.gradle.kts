@@ -73,7 +73,8 @@ android {
 
 room {
     // Плагин раскладывает схемы по вариантам и не даёт flavors писать в один файл параллельно
-    schemaDirectory("$projectDir/schemas")
+    schemaDirectory("offline", "$projectDir/schemas/offline")
+    schemaDirectory("api", "$projectDir/schemas/api")
 }
 
 ksp {
