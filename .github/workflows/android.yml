@@ -65,7 +65,9 @@ jobs:
         run: ./gradlew --no-daemon testOfflineDebugUnitTest
 
       - name: Lint
-        run: ./gradlew --no-daemon lintOfflineDebug
+        run: |
+          ./gradlew --no-daemon lintOfflineDebug || {
+            cat app/build/intermediates/lint_intermediate_text_report/offlineDebug/lintReportOfflineDebug/lint-results-offlineDebug.txt | grep -B2 -A12 "Error:" ; exit 1; }
 
       - name: Отчёты тестов и lint
         if: always()

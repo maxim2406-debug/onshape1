@@ -87,9 +87,6 @@
 
         <!-- Экспортируемые отладочные ресиверы библиотек не нужны -->
         <receiver
-            android:name="androidx.profileinstaller.ProfileInstallReceiver"
-            tools:node="remove" />
-        <receiver
             android:name="androidx.work.impl.diagnostics.DiagnosticsReceiver"
             tools:node="remove" />
     </application>
