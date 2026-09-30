@@ -108,19 +108,26 @@ class BlocksViewModel @Inject constructor(
     }
 
     fun dismissProposal() { proposal.value = null }
+    fun deleteCustom(b: Block) = viewModelScope.launch { catalog.deleteCustomBlock(b); _messages.tryEmit("Блок ${b.code} удалён") }
     fun deleteSub(s: Substitution) = viewModelScope.launch { meals.deleteSubstitution(s) }
 }
 
 @Composable
 fun BlocksScreen(nav: NavController, vm: BlocksViewModel = hiltViewModel()) {
     val blocks by vm.blocks.collectAsStateWithLifecycle()
+    var deleting by remember { mutableStateOf<Block?>(null) }
+    deleting?.let { b ->
+        com.ration.app.ui.components.ConfirmDialog("Удалить «${b.name}»?", "Свой блок исчезнет из каталога и планировщика. Записи в журнале сохранятся.",
+            confirm = "Удалить", onConfirm = { vm.deleteCustom(b); deleting = null }, onDismiss = { deleting = null })
+    }
     Scaffold(topBar = { BackTopBar("Блоки и рецепты", { nav.popBackStack() }) }) { pad ->
         LazyColumn(Modifier.fillMaxSize().padding(pad)) {
             MealKind.entries.forEach { kind ->
                 item { SectionTitle(kind.label, Modifier.padding(horizontal = 16.dp)) }
-                items(blocks.filter { it.kind == kind }, key = { it.id }) { b ->
+                items(blocks.filter { it.kind == kind && (it.active || !it.custom) }, key = { it.id }) { b ->
                     ListItem(
-                        headlineContent = { Text("${b.code} ${b.name}") },
+                        headlineContent = { Text("${b.code} ${b.name}" + if (b.custom) " · мой" else "") },
+                        trailingContent = if (b.custom) ({ TextButton(onClick = { deleting = b }) { Text("Удалить") } }) else null,
                         supportingContent = { Text("${Math.round(b.kcal)} ккал · ${Math.round(b.protein)} г" + if (b.prepMinutes > 0) " · ${b.prepMinutes} мин" else "") },
                         modifier = Modifier.clickable { nav.navigate("block/${b.id}") },
                     )

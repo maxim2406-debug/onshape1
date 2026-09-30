@@ -91,6 +91,8 @@ fun TodayScreen(nav: NavController, vm: TodayViewModel = hiltViewModel()) {
                     AssistChip(onClick = { vm.bar(true) }, label = { Text("Протеиновый батончик") })
                     AssistChip(onClick = vm::alcohol, label = { Text("Алкоголь") })
                     AssistChip(onClick = { nav.navigate("log/0") }, label = { Text("Свой продукт") })
+                    AssistChip(onClick = { nav.navigate("build/0/0") }, label = { Text("Собрать из продуктов") })
+                    AssistChip(onClick = { nav.navigate("cook") }, label = { Text("Что приготовить") })
                 }
             }
             if (st.warnings.isNotEmpty()) item {

@@ -66,6 +66,7 @@ class ImportViewModel @Inject constructor(
     private val recognizer: Recognizer,
     private val settings: SettingsRepository,
     private val keys: SecureKeyStore,
+    private val drafts: com.ration.app.data.repo.Drafts,
 ) : ViewModel() {
     val ui = MutableStateFlow(ImportUi(apiAvailable = recognizer.available))
     val products: StateFlow<List<Product>> = catalog.products.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
@@ -79,6 +80,9 @@ class ImportViewModel @Inject constructor(
 
     fun setMode(m: ImportMode) { ui.value = ui.value.copy(mode = m, lines = emptyList(), label = null, errors = emptyList(), message = null) }
     fun setText(t: String) { ui.value = ui.value.copy(text = t.take(ImportLimits.MAX_TEXT_BYTES)) }
+    /** Текст уходит на экран инвентаризации (17.1) — там режим «было → станет». */
+    fun toInventory() { drafts.inventoryText = ui.value.text }
+
     fun consumeMessage() { ui.value = ui.value.copy(message = null) }
 
     suspend fun prompt(): String = if (ui.value.mode == ImportMode.RECEIPT) Prompts.receipt(catalog.allProducts()) else Prompts.LABEL

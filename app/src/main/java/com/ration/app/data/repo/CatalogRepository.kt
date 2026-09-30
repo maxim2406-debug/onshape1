@@ -169,9 +169,9 @@ class CatalogRepository @Inject constructor(
         id
     }
 
-    suspend fun deleteCustomBlock(b: Block) = db.withTransaction {
-        db.blocks().deleteIngredients(b.id)
-        db.blocks().deleteCustom(b.id)
+    /** Удаление своего блока: строка остаётся неактивной, чтобы план и журнал со ссылкой на неё не ломались. */
+    suspend fun deleteCustomBlock(b: Block) {
+        if (b.custom) db.blocks().update(b.copy(active = false))
     }
 
     suspend fun saveUserRecipe(r: Recipe) = db.recipes().upsertAll(listOf(r.copy(source = "user")))

@@ -80,11 +80,48 @@ jobs:
           if-no-files-found: ignore
           retention-days: 14
 
+  old:
+    name: Прежняя версия (для проверки обновления)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Android SDK
+        uses: android-actions/setup-android@v3
+        with:
+          packages: "platforms;android-36 build-tools;36.0.0 platform-tools"
+
+      - name: Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Сборка версии 1.0.0 (БД v1) с тем же debug-ключом
+        run: |
+          mkdir -p ~/.android && cp app/debug.keystore ~/.android/debug.keystore
+          git fetch --depth=1 origin 5d542e3909b50245d7683def73381a0294d77778
+          git worktree add "$RUNNER_TEMP/old" FETCH_HEAD
+          cd "$RUNNER_TEMP/old" && ./gradlew --no-daemon assembleOfflineDebug
+          mkdir -p "$GITHUB_WORKSPACE/old-apk"
+          cp app/build/outputs/apk/offline/debug/*.apk "$GITHUB_WORKSPACE/old-apk/"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ration-old-apk-${{ github.sha }}
+          path: old-apk/*.apk
+          if-no-files-found: error
+          retention-days: 3
+
   smoke:
     name: Запуск на эмуляторе
-    needs: build
+    needs: [build, old]
     runs-on: ubuntu-latest
-    timeout-minutes: 40
+    timeout-minutes: 50
     steps:
       - uses: actions/checkout@v4
 
@@ -93,6 +130,12 @@ jobs:
         with:
           name: ration-apk-${{ github.sha }}
           path: apk
+
+      - name: Прежняя APK
+        uses: actions/download-artifact@v4
+        with:
+          name: ration-old-apk-${{ github.sha }}
+          path: old-apk
 
       - name: KVM
         run: |
@@ -108,7 +151,7 @@ jobs:
           arch: x86_64
           disable-animations: true
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
-          script: bash .github/scripts/smoke.sh apk
+          script: bash .github/scripts/smoke.sh apk old-apk
 
       - name: Logcat
         if: always()

@@ -186,6 +186,15 @@ fun SettingsScreen(nav: NavController, vm: SettingsViewModel = hiltViewModel()) 
             IntRow("Белок: минимум, г", s.proteinMin) { v -> vm.update { it.copy(proteinMin = v) } }
             IntRow("Белок: максимум, г", s.proteinMax) { v -> vm.update { it.copy(proteinMax = v) } }
 
+            var veg by remember(s.vegQuickGrams) { mutableStateOf(s.vegQuickGrams.joinToString(", ")) }
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                OutlinedTextField(veg, { veg = it.take(40) }, label = { Text("Овощи: быстрые граммовки") }, singleLine = true, modifier = Modifier.weight(1f))
+                TextButton(onClick = {
+                    val list = veg.split(',', ' ', ';').mapNotNull { it.trim().toIntOrNull() }.filter { it in 10..1000 }.distinct().take(5)
+                    if (list.isNotEmpty()) vm.update { it.copy(vegQuickGrams = list) }
+                }) { Text("OK") }
+            }
+
             SectionTitle("Время слотов")
             DayType.entries.forEach { t ->
                 Text("Тип ${t.label}", style = MaterialTheme.typography.labelLarge)

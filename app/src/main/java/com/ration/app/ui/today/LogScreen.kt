@@ -80,7 +80,8 @@ fun LogScreen(nav: NavController, slotId: Long, vm: LogViewModel = hiltViewModel
                         }
                     }
                 }
-                if (tab == 0) BlockTab(vm, blocks, slotType, ui.slot?.blockId, ui.alternatives) { b, m, f, meat -> vm.logBlock(b, slotType, m, f, meat) }
+                if (tab == 0) BlockTab(vm, blocks, slotType, ui.slot?.blockId, ui.alternatives,
+                    onBuild = { b -> nav.navigate("build/$slotId/${b?.id ?: 0}") }) { b, m, f, meat -> vm.logBlock(b, slotType, m, f, meat) }
                 else CustomTab(vm, foods) { food, grams, portions -> vm.logCustom(food, slotType, grams, portions) }
             }
         }
@@ -91,6 +92,7 @@ fun LogScreen(nav: NavController, slotId: Long, vm: LogViewModel = hiltViewModel
 @Composable
 private fun BlockTab(
     vm: LogViewModel, blocks: List<Block>, slot: SlotType?, plannedId: Long?, alternatives: List<Block>,
+    onBuild: (Block?) -> Unit,
     onLog: (Block, Double, Boolean, MeatChoice?) -> Unit,
 ) {
     val planned = blocks.firstOrNull { it.id == plannedId }
@@ -127,6 +129,10 @@ private fun BlockTab(
         onClick = { selected?.let { if (vm.needsMeatQuestion(it)) askMeat = true else onLog(it, multiplier, fruit, null) } },
         enabled = selected != null, modifier = Modifier.fillMaxWidth(),
     ) { Text("Записать") }
+    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        TextButton(onClick = { onBuild(selected) }, enabled = selected != null) { Text("Изменить состав") }
+        TextButton(onClick = { onBuild(null) }) { Text("Собрать из продуктов") }
+    }
 
     if (askMeat) {
         AlertDialog(

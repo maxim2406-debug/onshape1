@@ -55,7 +55,7 @@ import kotlinx.coroutines.launch
 import java.time.LocalDate
 import javax.inject.Inject
 
-data class PantryRow(val product: Product, val total: Double, val percent: Double?, val level: StockLevel, val nearestExpiry: Long?)
+data class PantryRow(val product: Product, val total: Double, val percent: Double?, val level: StockLevel, val nearestExpiry: Long?, val approx: Boolean = false)
 data class PantryState(val rows: List<PantryRow> = emptyList(), val preps: List<Prep> = emptyList(), val today: Long = 0, val showUntracked: Boolean = false)
 
 @HiltViewModel
@@ -67,11 +67,11 @@ class PantryViewModel @Inject constructor(
     private val showUntracked = kotlinx.coroutines.flow.MutableStateFlow(false)
     val state = combine(catalog.products, inventory.stock, inventory.activePreps, settings.settings, showUntracked) { products, stock, preps, s, su ->
         val byProduct = stock.groupBy { it.productId }
-        val rows = products.filter { su || !it.untracked }.map { p ->
+        val rows = products.filter { (su || !it.untracked) && (!it.hidden || byProduct[it.id].orEmpty().any { s -> s.qty > 1e-6 }) }.map { p ->
             val items = byProduct[p.id].orEmpty()
             val total = items.sumOf { it.qty }
             PantryRow(p, total, Thresholds.percent(total, p.parLevel), Thresholds.level(total, p.parLevel, s.buyThresholdPct, s.urgentThresholdPct),
-                items.filter { it.qty > 1e-6 }.mapNotNull { it.expiresDay }.minOrNull())
+                items.filter { it.qty > 1e-6 }.mapNotNull { it.expiresDay }.minOrNull(), items.any { it.qty > 1e-6 && it.approx })
         }.sortedWith(compareBy<PantryRow> { if (it.product.untracked) 2 else if (it.percent == null) 1 else 0 }.thenBy { it.percent ?: 0.0 }.thenBy { it.product.name })
         PantryState(rows, preps, inventory.today(), su)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), PantryState())
@@ -93,12 +93,22 @@ fun levelColor(l: StockLevel) = when (l) {
     StockLevel.UNKNOWN -> LevelColors.grey
 }
 
+@OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable
 fun PantryScreen(nav: NavController, vm: PantryViewModel = hiltViewModel()) {
     val st by vm.state.collectAsStateWithLifecycle()
     var editing by remember { mutableStateOf<PantryRow?>(null) }
+    var adding by remember { mutableStateOf(false) }
     Scaffold(topBar = { PlainTopBar("Кладовая") { FilterChip(st.showUntracked, vm::toggleUntracked, { Text("Мелочи") }) } }) { pad ->
         LazyColumn(Modifier.fillMaxSize().padding(pad).padding(horizontal = 16.dp)) {
+            item {
+                androidx.compose.foundation.layout.FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.padding(top = 4.dp)) {
+                    androidx.compose.material3.AssistChip(onClick = { nav.navigate("inventory") }, label = { Text("Инвентаризация") })
+                    androidx.compose.material3.AssistChip(onClick = { adding = true }, label = { Text("Добавить в библиотеку") })
+                    androidx.compose.material3.AssistChip(onClick = { nav.navigate("library") }, label = { Text("Библиотека") })
+                    androidx.compose.material3.AssistChip(onClick = { nav.navigate("cook") }, label = { Text("Что приготовить") })
+                }
+            }
             item { SectionTitle("Заготовки") }
             if (st.preps.isEmpty()) item { Text("Заготовок нет. Приготовьте на вкладке «Заготовки».", style = MaterialTheme.typography.bodySmall) }
             items(st.preps, key = { "p${it.id}" }) { prep -> PrepRow(prep, st.today, onDiscard = { vm.discard(prep) }) }
@@ -112,7 +122,7 @@ fun PantryScreen(nav: NavController, vm: PantryViewModel = hiltViewModel()) {
                         Text(row.product.name, fontWeight = FontWeight.Medium)
                         val exp = row.nearestExpiry?.let { " · до ${TimeUtil.dateShort(LocalDate.ofEpochDay(it))}" } ?: ""
                         val par = row.product.parLevel?.let { " из ${TimeUtil.num(it)}" } ?: " · норма не задана"
-                        Text("${TimeUtil.num(row.total)} ${row.product.unit.label}$par$exp" + if (row.product.untracked) " · не отслеживается" else "",
+                        Text("${if (row.approx) "≈" else ""}${TimeUtil.num(row.total)} ${row.product.unit.label}$par$exp" + if (row.product.untracked) " · не отслеживается" else "",
                             style = MaterialTheme.typography.bodySmall,
                             color = if (row.nearestExpiry != null && row.nearestExpiry < st.today) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant)
                     }
@@ -123,6 +133,7 @@ fun PantryScreen(nav: NavController, vm: PantryViewModel = hiltViewModel()) {
         }
     }
     editing?.let { row -> EditProductDialog(row, vm) { editing = null } }
+    if (adding) com.ration.app.ui.library.ProductFormDialog(onDismiss = { adding = false }) { adding = false }
 }
 
 @Composable

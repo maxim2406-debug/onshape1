@@ -85,6 +85,7 @@ fun ImportScreen(nav: NavController, sharedText: String?, onSharedConsumed: () -
                     Text(if (ui.mode == ImportMode.RECEIPT) "Скопировать промпт для чека" else "Скопировать промпт для этикетки")
                 }
                 OutlinedButton(onClick = { vm.setText(clipboard.getText()?.text.orEmpty()); vm.parse() }) { Text("Вставить из буфера") }
+                if (ui.mode == ImportMode.RECEIPT) OutlinedButton(onClick = { vm.toInventory(); nav.navigate("inventory") }) { Text("Это инвентаризация") }
                 if (ui.mode == ImportMode.RECEIPT) OutlinedButton(onClick = { fileLauncher.launch(arrayOf("text/plain", "text/csv", "text/comma-separated-values")) }) { Text("Файл .txt/.csv") }
                 if (ui.apiEnabled) OutlinedButton(onClick = {
                     if (ui.apiWarningAccepted) photoLauncher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) else showApiWarning = true
@@ -150,44 +151,17 @@ private fun ReviewRow(line: ReviewLine, products: List<Product>, vm: ImportViewM
                 )
                 TextButton(onClick = { menu = true }) { Text("Выбрать") }
                 TextButton(onClick = { create = true }) { Text("Новый") }
-                DropdownMenu(menu, { menu = false }) {
-                    products.filter { !it.untracked }.forEach { p ->
-                        DropdownMenuItem(text = { Text(p.name) }, onClick = { vm.update(line.copy(productId = p.id, match = MatchKind.EXACT)); menu = false })
-                    }
-                }
             }
         }
     }
-    if (create) NewProductDialog(line, onDismiss = { create = false }) { name, unit, k, p -> vm.createProduct(line, name, unit, k, p); create = false }
-}
-
-@Composable
-private fun NewProductDialog(line: ReviewLine, onDismiss: () -> Unit, onCreate: (String, MeasureUnit, Double, Double) -> Unit) {
-    var name by remember { mutableStateOf(line.rawName) }
-    var unit by remember { mutableStateOf(line.unit) }
-    var kcal by remember { mutableStateOf("") }
-    var protein by remember { mutableStateOf("") }
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("Новый продукт") },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                OutlinedTextField(name, { name = it.take(120) }, label = { Text("Название") }, singleLine = true)
-                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    MeasureUnit.entries.forEach { u -> FilterChip(unit == u, { unit = u }, { Text(u.label) }) }
-                }
-                NumberField("Ккал на 100 г", kcal, { kcal = it })
-                NumberField("Белок на 100 г", protein, { protein = it })
-                Text("Название чека сохранится как псевдоним.", style = MaterialTheme.typography.bodySmall)
-            }
-        },
-        confirmButton = {
-            TextButton(onClick = {
-                if (name.isNotBlank()) onCreate(name, unit, (kcal.toNumberOrNull() ?: 0.0).coerceIn(0.0, 900.0), (protein.toNumberOrNull() ?: 0.0).coerceIn(0.0, 100.0))
-            }) { Text("Создать") }
-        },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Отмена") } },
-    )
+    if (menu) com.ration.app.ui.library.FoodPickerDialog("Продукт для «${line.rawName}»", onDismiss = { menu = false }, includeCustomFoods = false) { e ->
+        e.productId?.let { vm.update(line.copy(productId = it, match = MatchKind.EXACT)) }
+        menu = false
+    }
+    if (create) com.ration.app.ui.library.ProductFormDialog(initialName = line.rawName, onDismiss = { create = false }, pickLabel = "Добавить и выбрать") { e ->
+        e.productId?.let { vm.update(line.copy(productId = it, match = MatchKind.EXACT)) }
+        create = false
+    }
 }
 
 @Composable

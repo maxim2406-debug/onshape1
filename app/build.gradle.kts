@@ -16,8 +16,19 @@ android {
         applicationId = "com.ration.app"
         minSdk = 26
         targetSdk = 36
-        versionCode = 1
-        versionName = "1.0.0"
+        versionCode = 2
+        versionName = "1.1.0"
+    }
+
+    // Постоянный debug-ключ: новые сборки CI ставятся поверх старых без потери данных.
+    // Для публикации нужен отдельный приватный release-ключ.
+    signingConfigs {
+        getByName("debug") {
+            storeFile = file("debug.keystore")
+            storePassword = "android"
+            keyAlias = "androiddebugkey"
+            keyPassword = "android"
+        }
     }
 
     flavorDimensions += "distribution"
@@ -38,6 +49,7 @@ android {
     buildTypes {
         debug {
             applicationIdSuffix = ".debug"
+            signingConfig = signingConfigs.getByName("debug")
         }
         release {
             isMinifyEnabled = true

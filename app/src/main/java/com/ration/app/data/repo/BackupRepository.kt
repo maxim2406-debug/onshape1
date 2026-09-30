@@ -70,7 +70,14 @@ class BackupRepository @Inject constructor(
         val d = BackupCodec.decode(text, password)
         db.withTransaction {
             db.maintenance().deleteEverything()
-            db.products().insertAll(d.products)
+            // копия схемы 1: у продуктов нет источника — свои (без ключа засева) помечаются USER, как в MIGRATION_1_2
+            db.products().insertAll(if (d.schemaVersion >= 2) d.products else d.products.map {
+                when {
+                    it.key == null -> it.copy(source = com.ration.app.domain.model.ProductSource.USER)
+                    it.key == "cottage" || it.key == "protein_yogurt" -> it.copy(source = com.ration.app.domain.model.ProductSource.LABEL)
+                    else -> it
+                }
+            })
             db.stock().insertAll(d.stock)
             db.purchases().insertAll(d.purchases)
             db.purchases().insertLines(d.purchaseLines)
