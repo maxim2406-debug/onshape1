@@ -81,7 +81,10 @@ object LibraryParser {
     private fun lev(a: String, b: String): Double =
         if (a.isEmpty() || b.isEmpty()) 0.0 else 1.0 - ProductMatcher.levenshtein(a, b).toDouble() / maxOf(a.length, b.length)
 
-    private val stateWords = Regex("""(?U)\b(сыр(ой|ая|ое|ые)|варён(ый|ая|ое|ые)|варен(ый|ая|ое|ые)|сух(ой|ая|ое|ие)|готов(ый|ая|ое|ые)|на гриле|жарен(ый|ая|ое|ые))\b""")
+    // Границы слова через просмотр вокруг, а не \b с юникод-флагом: этот флаг не поддерживается движком регулярных выражений Android (ICU)
+    private const val WB = """(?<![\p{L}\p{N}_])"""
+    private const val WE = """(?![\p{L}\p{N}_])"""
+    private val stateWords = Regex("""${WB}(сыр(ой|ая|ое|ые)|варён(ый|ая|ое|ые)|варен(ый|ая|ое|ые)|сух(ой|ая|ое|ие)|готов(ый|ая|ое|ые)|на гриле|жарен(ый|ая|ое|ые))${WE}""")
 
     private fun baseName(n: String) = stateWords.replace(FoodSearch.normalize(n), "").replace(Regex("\\s+"), " ").trim()
 
@@ -96,8 +99,8 @@ object LibraryParser {
     fun cookedFromName(name: String): CookState? {
         val n = FoodSearch.normalize(name)
         return when {
-            Regex("""(?U)\bсыр(ой|ая|ое|ые)\b""").containsMatchIn(n) || Regex("""(?U)\bсух(ой|ая|ое|ие)\b""").containsMatchIn(n) -> CookState.RAW
-            Regex("""(?U)\b(варен|варён|готов|жарен)""").containsMatchIn(n) || n.contains("на гриле") -> CookState.COOKED
+            Regex("""${WB}сыр(ой|ая|ое|ые)${WE}""").containsMatchIn(n) || Regex("""${WB}сух(ой|ая|ое|ие)${WE}""").containsMatchIn(n) -> CookState.RAW
+            Regex("""${WB}(варен|варён|готов|жарен)""").containsMatchIn(n) || n.contains("на гриле") -> CookState.COOKED
             else -> null
         }
     }

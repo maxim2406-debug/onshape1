@@ -156,4 +156,20 @@ class LibrarySearchTest {
         assertTrue(p.contains("\nЛосось, сырой\n"))
         assertTrue(LibraryPrompts.fridgePhoto(all).contains("приблизительно"))
     }
+
+    /** Android (ICU) не поддерживает флаг (?U) / UNICODE_CHARACTER_CLASS: регулярка падает только на устройстве. */
+    @Test fun noJvmOnlyRegexFlags() {
+        val src = listOf(java.io.File("src/main/java"), java.io.File("app/src/main/java")).first { it.exists() }
+        val bad = src.walk().filter { it.extension == "kt" }
+            .filter { f -> f.readText().let { it.contains("(?U)") || it.contains("UNICODE_CHARACTER_CLASS") } }.map { it.name }.toList()
+        assertTrue("флаг (?U) в: $bad", bad.isEmpty())
+    }
+
+    @Test fun cookedStateFromCyrillicName() {
+        assertEquals(com.ration.app.domain.model.CookState.RAW, LibraryParser.cookedFromName("Лосось, сырой"))
+        assertEquals(com.ration.app.domain.model.CookState.RAW, LibraryParser.cookedFromName("Гречка сухая"))
+        assertEquals(com.ration.app.domain.model.CookState.COOKED, LibraryParser.cookedFromName("Гречка варёная"))
+        assertNull(LibraryParser.cookedFromName("Сырок творожный"))
+        assertNull(LibraryParser.cookedFromName("Сухарики"))
+    }
 }
