@@ -44,7 +44,7 @@ object LibraryParser {
         val seen = mutableSetOf<String>()
         text.lineSequence().take(ImportLimits.MAX_LINES).forEachIndexed { idx, raw ->
             val lineNo = idx + 1
-            var line = raw.trim().removePrefix("﻿")
+            var line = raw.trim().removePrefix("\uFEFF")
             if (line.isEmpty() || line.startsWith("#")) return@forEachIndexed
             val hash = line.indexOf('#')
             val uncertain = hash >= 0 && line.substring(hash).contains("не уверен")
