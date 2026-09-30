@@ -67,7 +67,7 @@ object ImportParser {
         val comments = mutableListOf<String>()
         text.lineSequence().take(ImportLimits.MAX_LINES).forEachIndexed { idx, rawLine ->
             val lineNo = idx + 1
-            val line = rawLine.trim().removePrefix("﻿")
+            val line = rawLine.trim().removePrefix("\uFEFF")
             if (line.isEmpty()) return@forEachIndexed
             if (line.startsWith("#")) {
                 comments += line.removePrefix("#").trim()
