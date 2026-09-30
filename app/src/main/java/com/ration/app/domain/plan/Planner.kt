@@ -86,6 +86,8 @@ object Planner {
     /** Блок подходит слоту по типу и правилам (без оценки). */
     fun eligible(slot: SlotType, b: Block, input: PlannerInput): Boolean {
         if (!b.active || b.kind !in slot.kinds) return false
+        // Свои блоки (12.4) — только если укладываются в диапазоны слота.
+        if (b.custom && !com.ration.app.domain.meal.CustomBlocks.fitsSlot(b, input.blocks)) return false
         val isBar = Tags.BAR in b.tags
         if (slot == SlotType.ROAD_BAR) return isBar
         if (isBar) return false

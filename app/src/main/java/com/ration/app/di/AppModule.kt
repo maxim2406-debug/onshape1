@@ -18,7 +18,9 @@ import javax.inject.Singleton
 object AppModule {
     @Provides @Singleton
     fun database(@ApplicationContext context: Context): AppDatabase =
-        Room.databaseBuilder(context, AppDatabase::class.java, AppDatabase.NAME).build()
+        Room.databaseBuilder(context, AppDatabase::class.java, AppDatabase.NAME)
+            .addMigrations(AppDatabase.MIGRATION_1_2)
+            .build()
 
     /** Часы, всегда следующие текущему часовому поясу устройства (смена пояса без перезапуска). */
     @Provides @Singleton

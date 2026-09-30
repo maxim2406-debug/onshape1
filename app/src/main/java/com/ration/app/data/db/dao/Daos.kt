@@ -20,6 +20,7 @@ import com.ration.app.data.db.entity.Product
 import com.ration.app.data.db.entity.Purchase
 import com.ration.app.data.db.entity.PurchaseLine
 import com.ration.app.data.db.entity.QuickLog
+import com.ration.app.data.db.entity.Recipe
 import com.ration.app.data.db.entity.StockItem
 import com.ration.app.data.db.entity.Substitution
 import com.ration.app.data.db.entity.WeightLog
@@ -38,6 +39,9 @@ interface ProductDao {
     @Insert(onConflict = OnConflictStrategy.ABORT) suspend fun insertAll(list: List<Product>)
     @Update suspend fun update(p: Product)
     @Update suspend fun updateAll(list: List<Product>)
+    @Query("DELETE FROM product WHERE id = :id") suspend fun delete(id: Long)
+    @Query("UPDATE product SET useCount = useCount + 1, lastUsedMillis = :now WHERE id IN (:ids)") suspend fun markUsed(ids: List<Long>, now: Long)
+    @Query("SELECT DISTINCT category FROM product WHERE category != '' ORDER BY category") suspend fun categories(): List<String>
 }
 
 @Dao
@@ -48,6 +52,8 @@ interface StockDao {
     @Query("SELECT productId, SUM(qty) AS total FROM stock_item GROUP BY productId") suspend fun totals(): List<ProductTotal>
     @Insert suspend fun insert(s: StockItem): Long
     @Insert suspend fun insertAll(list: List<StockItem>)
+    @Query("DELETE FROM stock_item WHERE id IN (:ids)") suspend fun deleteIds(ids: List<Long>)
+    @Query("SELECT COUNT(*) FROM stock_item WHERE productId = :productId") suspend fun countFor(productId: Long): Int
     @Update suspend fun updateAll(list: List<StockItem>)
     @Query("DELETE FROM stock_item WHERE productId = :productId") suspend fun deleteForProduct(productId: Long)
     @Query("DELETE FROM stock_item WHERE qty <= 0.000001 AND purchasedDay < :beforeDay") suspend fun purgeEmpty(beforeDay: Long)
@@ -71,7 +77,11 @@ interface BlockDao {
     @Query("SELECT * FROM block WHERE id = :id") suspend fun get(id: Long): Block?
     @Query("SELECT * FROM block WHERE code = :code") suspend fun byCode(code: String): Block?
     @Insert suspend fun insertAll(list: List<Block>)
+    @Insert suspend fun insert(b: Block): Long
     @Update suspend fun update(b: Block)
+    @Query("DELETE FROM block WHERE id = :id AND custom = 1") suspend fun deleteCustom(id: Long)
+    @Query("DELETE FROM block_ingredient WHERE blockId = :blockId") suspend fun deleteIngredients(blockId: Long)
+    @Query("SELECT COUNT(*) FROM block_ingredient WHERE productId = :productId") suspend fun countUsing(productId: Long): Int
     @Query("SELECT * FROM block_ingredient ORDER BY blockId, id") suspend fun allIngredients(): List<BlockIngredient>
     @Query("SELECT * FROM block_ingredient ORDER BY blockId, id") fun observeIngredients(): Flow<List<BlockIngredient>>
     @Query("SELECT * FROM block_ingredient WHERE blockId = :blockId ORDER BY id") suspend fun ingredients(blockId: Long): List<BlockIngredient>
@@ -101,6 +111,8 @@ interface MealDao {
     @Query("SELECT * FROM meal_log WHERE day BETWEEN :from AND :to ORDER BY atMillis") suspend fun range(from: Long, to: Long): List<MealLog>
     @Query("SELECT * FROM meal_log WHERE day BETWEEN :from AND :to ORDER BY atMillis") fun observeRange(from: Long, to: Long): Flow<List<MealLog>>
     @Query("SELECT * FROM meal_log") suspend fun getAll(): List<MealLog>
+    @Query("SELECT * FROM meal_log ORDER BY atMillis DESC LIMIT :n") suspend fun recent(n: Int): List<MealLog>
+    @Query("SELECT COUNT(*) FROM meal_log WHERE items LIKE :pattern") suspend fun countMentioning(pattern: String): Int
     @Query("SELECT * FROM meal_log WHERE id = :id") suspend fun get(id: Long): MealLog?
     @Insert suspend fun insert(l: MealLog): Long
     @Insert suspend fun insertAll(list: List<MealLog>)
@@ -165,6 +177,15 @@ interface HealthDao {
 }
 
 @Dao
+interface RecipeDao {
+    @Query("SELECT * FROM recipe ORDER BY title") fun observeAll(): Flow<List<Recipe>>
+    @Query("SELECT * FROM recipe ORDER BY title") suspend fun getAll(): List<Recipe>
+    @Query("SELECT * FROM recipe WHERE id = :id") suspend fun get(id: String): Recipe?
+    @Insert(onConflict = OnConflictStrategy.REPLACE) suspend fun upsertAll(list: List<Recipe>)
+    @Query("DELETE FROM recipe WHERE id IN (:ids)") suspend fun deleteIds(ids: List<String>)
+}
+
+@Dao
 abstract class MaintenanceDao {
     @Query("DELETE FROM product") abstract suspend fun products()
     @Query("DELETE FROM stock_item") abstract suspend fun stock()
@@ -182,9 +203,10 @@ abstract class MaintenanceDao {
     @Query("DELETE FROM quick_log") abstract suspend fun quickLogs()
     @Query("DELETE FROM weight_log") abstract suspend fun weights()
     @Query("DELETE FROM bp_log") abstract suspend fun bp()
+    @Query("DELETE FROM recipe") abstract suspend fun recipes()
 
     open suspend fun deleteEverything() {
         products(); stock(); purchases(); purchaseLines(); blocks(); blockIngredients(); prepTemplates(); preps()
-        mealLogs(); customFoods(); substitutions(); dayPlans(); plannedSlots(); quickLogs(); weights(); bp()
+        mealLogs(); customFoods(); substitutions(); dayPlans(); plannedSlots(); quickLogs(); weights(); bp(); recipes()
     }
 }

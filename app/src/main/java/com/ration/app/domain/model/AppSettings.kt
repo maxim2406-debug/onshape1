@@ -92,6 +92,12 @@ data class AppSettings(
     val claudeModel: String = "claude-opus-5-5",
     val claudeWarningAccepted: Boolean = false,
     val biometricLock: Boolean = false,
+    /** Быстрые кнопки веса для овощей в конструкторе (12.1.4). */
+    val vegQuickGrams: List<Int> = listOf(100, 200, 300),
+    /** Выбранная сортировка библиотеки (16.2). */
+    val librarySort: String = "FREQUENT",
+    /** Скрытые варианты «Что приготовить». */
+    val hiddenSuggestions: List<String> = emptyList(),
     val seeded: Boolean = false,
 ) {
     fun slotTimes(type: DayType): Map<SlotType, Int> = if (type == DayType.A) slotTimesA else slotTimesB

@@ -92,4 +92,71 @@ object Tags {
     const val ASK_MEAT = "ask_meat"
     const val PROTEIN_BAR = "protein_bar"
     const val CEREAL_BAR = "cereal_bar"
+    const val PROCESSED = "processed"
+    const val SALTY = "salty"
+
+    /** Теги продукта, по которым считаются недельные счётчики (12.3). */
+    val FOOD_TAGS = setOf(FISH, FATTY_FISH, RED_MEAT, EGG, SEAFOOD, PROCESSED, SALTY)
+    /** Теги блока, не зависящие от состава. */
+    val NON_FOOD_TAGS = setOf(FREE_LUNCH, BAR, PROTEIN_BAR, CEREAL_BAR, LIGHT, STREET, SHOP, HOME, CARRY, PREP, PREP_NIGHT, ASK_MEAT)
+}
+
+/** Происхождение пищевой ценности продукта (13.2.3). */
+@Serializable
+enum class ProductSource(val label: String) { REFERENCE("справочное"), LABEL("с этикетки"), USER("моё") }
+
+@Serializable
+enum class CookState(val label: String) { RAW("сырой"), COOKED("готовый") }
+
+/** Роль продукта в подборе блюд (18.2). */
+@Serializable
+enum class FoodRole(val label: String) {
+    PROTEIN("белок"), VEG("овощи"), CARB("гарнир"), FAT("жиры"), FRUIT("фрукты"),
+    DAIRY("молочное"), SAUCE("соус"), SNACK("перекус"), READY("готовое"),
+}
+
+@Serializable
+enum class CookMethod(val label: String, val device: String) {
+    SOUSVIDE("су-вид", "🌡"), NINJA_GRILL("Ninja гриль", "🔥"), NINJA_AIRFRY("Ninja аэрогриль", "💨"),
+    PAN("сковорода", "🍳"), OVEN("духовка", "♨"), BOIL("варка", "🥘"), RAW("без готовки", "🥗");
+
+    val usesStove: Boolean get() = this == PAN || this == BOIL
+    val isNinja: Boolean get() = this == NINJA_GRILL || this == NINJA_AIRFRY
+}
+
+/** Приём пищи для подбора (18.1): З / С / О / У / Е / П. */
+@Serializable
+enum class CookSlot(val letter: String, val label: String) {
+    BREAKFAST("З", "Завтрак"), CARRY("С", "Обед с собой"), LUNCH("О", "Обед"),
+    DINNER("У", "Ужин"), EVENING("Е", "Вечер"), SNACK("П", "Перекус");
+
+    val mealKinds: Set<MealKind>
+        get() = when (this) {
+            BREAKFAST -> setOf(MealKind.BREAKFAST)
+            CARRY -> setOf(MealKind.LUNCH_CARRY)
+            LUNCH -> setOf(MealKind.LUNCH_CARRY)
+            DINNER -> setOf(MealKind.DINNER)
+            EVENING -> setOf(MealKind.EVENING)
+            SNACK -> setOf(MealKind.SNACK)
+        }
+
+    val slotType: SlotType
+        get() = when (this) {
+            BREAKFAST -> SlotType.BREAKFAST
+            CARRY, LUNCH -> SlotType.LUNCH
+            DINNER -> SlotType.DINNER
+            EVENING -> SlotType.EVENING
+            SNACK -> SlotType.SNACK_1
+        }
+
+    companion object {
+        fun of(slot: SlotType): CookSlot = when (slot) {
+            SlotType.BREAKFAST -> BREAKFAST
+            SlotType.LUNCH -> LUNCH
+            SlotType.DINNER -> DINNER
+            SlotType.EVENING -> EVENING
+            SlotType.SNACK_1, SlotType.SNACK_2, SlotType.ROAD_BAR -> SNACK
+        }
+        fun ofLetter(l: String): CookSlot? = entries.firstOrNull { it.letter == l }
+    }
 }

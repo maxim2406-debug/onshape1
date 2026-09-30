@@ -63,7 +63,9 @@ class AlarmHandler @Inject constructor(
                         append(lines.joinToString(", "))
                         if (oat) append(". Вечером: банка овсянки на ночь (З5).")
                     }
-                    notifier.forecast(tomorrow, text)
+                    // 18.5: если сегодня не хватает белка — ссылка на варианты из холодильника
+                    val eaten = meals.logsRange(today, today).sumOf { it.protein }
+                    notifier.forecast(tomorrow, text, proteinShort = eaten < s.proteinMin)
                 }
             }
             AlarmKind.SHOPPING_CHECK -> inventory.checkThresholds()

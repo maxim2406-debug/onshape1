@@ -47,6 +47,7 @@ class BackupRepository @Inject constructor(
         quickLogs = db.quick().getAll(),
         weights = db.health().weights(),
         bp = db.health().bp(),
+        recipes = db.recipes().getAll().filter { it.source == "user" },
     )
 
     /** Экспорт в файл, выбранный пользователем (SAF). Ключ API не экспортируется. */
@@ -85,7 +86,10 @@ class BackupRepository @Inject constructor(
             db.quick().insertAll(d.quickLogs)
             db.health().insertWeights(d.weights)
             db.health().insertBps(d.bp)
+            db.recipes().upsertAll(d.recipes.map { it.copy(source = "user") })
         }
+        catalog.ensureSeeded()
+        catalog.forceCookbookSync()
         // Режим API не переносится: ключ не входит в копию.
         settings.replace(d.settings.copy(claudeApiEnabled = d.settings.claudeApiEnabled && keyStore.hasApiKey()))
         scheduler.rescheduleAll()

@@ -68,7 +68,7 @@ class BackupTest {
 
     @Test(expected = BackupException::class)
     fun rejectsNewerSchema() {
-        val text = BackupCodec.encode(data, null).replace("\"schemaVersion\":1", "\"schemaVersion\":99")
+        val text = BackupCodec.encode(data, null).replace("\"schemaVersion\":2", "\"schemaVersion\":99")
         BackupCodec.decode(text, null)
     }
 

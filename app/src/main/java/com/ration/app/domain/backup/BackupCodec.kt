@@ -13,6 +13,7 @@ import com.ration.app.data.db.entity.Product
 import com.ration.app.data.db.entity.Purchase
 import com.ration.app.data.db.entity.PurchaseLine
 import com.ration.app.data.db.entity.QuickLog
+import com.ration.app.data.db.entity.Recipe
 import com.ration.app.data.db.entity.StockItem
 import com.ration.app.data.db.entity.Substitution
 import com.ration.app.data.db.entity.WeightLog
@@ -49,6 +50,8 @@ data class BackupData(
     val quickLogs: List<QuickLog> = emptyList(),
     val weights: List<WeightLog> = emptyList(),
     val bp: List<BpLog> = emptyList(),
+    /** Пользовательские рецепты (source = user); встроенная база восстанавливается из приложения. */
+    val recipes: List<Recipe> = emptyList(),
 )
 
 @Serializable
@@ -68,7 +71,7 @@ class BackupException(message: String) : Exception(message)
 
 object BackupCodec {
     const val FORMAT = "ration-backup"
-    const val SCHEMA_VERSION = 1
+    const val SCHEMA_VERSION = 2
     const val MAX_BYTES = 20_000_000
     private const val PBKDF2_ITERATIONS = 210_000
     private const val KEY_BITS = 256
@@ -189,6 +192,9 @@ object BackupCodec {
         d.plannedSlots.forEach { check(it.minuteOfDay in 0 until 24 * 60 && (it.blockId == null || it.blockId in blockIds), "слот ${it.id}") }
         d.quickLogs.forEach { check(it.amount in 0.0..100_000.0, "быстрая запись ${it.id}") }
         d.weights.forEach { check(it.kg in 20.0..400.0, "вес ${it.id}") }
+        d.products.forEach { check(it.edibleFraction in 0.05..1.0 && it.tags.size <= 20, "поля продукта «${it.name}»") }
+        d.mealLogs.forEach { l -> check(l.items.size <= 50 && l.items.all { it.qty in 0.0..100_000.0 && it.kcal in 0.0..20_000.0 }, "состав приёма ${l.id}") }
+        d.recipes.forEach { r -> check(r.title.isNotBlank() && r.steps.size <= 20 && r.ingredients.size <= 30, "рецепт ${r.id}") }
         d.bp.forEach { check(it.systolic in 40..300 && it.diastolic in 20..200 && (it.pulse == null || it.pulse in 20..250), "давление ${it.id}") }
     }
 

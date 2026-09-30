@@ -38,6 +38,9 @@ data class PurchaseInput(
 
 data class CookResult(val preps: List<Prep>, val shortages: List<Shortage>)
 
+/** Данные для отмены инвентаризации (17.2). */
+data class InventoryUndo(val deductions: List<Deduction>, val createdStockIds: List<Long>, val parBefore: Map<Long, Pair<Double?, Boolean>>)
+
 @Singleton
 class InventoryRepository @Inject constructor(
     private val db: AppDatabase,
@@ -51,13 +54,76 @@ class InventoryRepository @Inject constructor(
 
     fun today(): Long = LocalDate.now(clock).toEpochDay()
 
+    @Volatile var lastInventoryUndo: InventoryUndo? = null
+        private set
+
+    suspend fun stockList() = db.stock().getAll()
+    suspend fun prepsList() = db.preps().getAll()
+
+    /**
+     * Применение инвентаризации (17.2). ADD — новая партия; SET и SET_ZERO — все партии продукта
+     * списываются по FIFO и кладётся одна партия с указанным остатком (с пометкой ≈ и сроком).
+     * Для продукта без нормы запаса нормой становится первое введённое количество.
+     */
+    suspend fun applyInventory(mode: com.ration.app.domain.inventory.InventoryMode, rows: List<com.ration.app.domain.inventory.InventoryRow>): InventoryUndo {
+        val today = today()
+        val undo = db.withTransaction {
+            val stock = db.stock().getAll()
+            val snap = StockSnapshot(stock, emptyList(), today)
+            val out = mutableListOf<Deduction>()
+            val created = mutableListOf<Long>()
+            val parBefore = mutableMapOf<Long, Pair<Double?, Boolean>>()
+            for (r in rows) {
+                val pid = r.product.id
+                if (mode == com.ration.app.domain.inventory.InventoryMode.ADD) {
+                    val add = r.after - r.before
+                    if (add > 1e-9) created += db.stock().insert(StockItem(productId = pid, qty = add, purchasedDay = today,
+                        expiresDay = r.expiresDay, approx = r.approx, note = "инвентаризация"))
+                } else {
+                    val cur = snap.total(pid)
+                    if (cur > 1e-9) snap.takeStock(pid, cur, out)
+                    if (r.after > 1e-9) created += db.stock().insert(StockItem(productId = pid, qty = r.after, purchasedDay = today,
+                        expiresDay = r.expiresDay, approx = r.approx, note = "инвентаризация"))
+                }
+                val p = db.products().get(pid)
+                if (p != null && p.parLevel == null && !p.parManual && r.after > 0 && !r.zeroed) {
+                    parBefore[pid] = p.parLevel to p.parManual
+                    db.products().update(p.copy(parLevel = r.after))
+                }
+            }
+            val (updated, _) = Ledger.apply(stock, emptyList(), out, -1)
+            val touched = out.mapNotNull { it.stockItemId }.toSet()
+            db.stock().updateAll(updated.filter { it.id in touched })
+            InventoryUndo(out, created, parBefore)
+        }
+        lastInventoryUndo = undo
+        checkThresholds()
+        return undo
+    }
+
+    /** «Отменить» — прежние остатки возвращаются (через Ledger, как отмена приёма). */
+    suspend fun undoInventory(): Boolean {
+        val u = lastInventoryUndo ?: return false
+        db.withTransaction {
+            if (u.createdStockIds.isNotEmpty()) db.stock().deleteIds(u.createdStockIds)
+            val stock = db.stock().getAll()
+            val (restored, _) = Ledger.apply(stock, emptyList(), u.deductions, +1)
+            val touched = u.deductions.mapNotNull { it.stockItemId }.toSet()
+            db.stock().updateAll(restored.filter { it.id in touched })
+            u.parBefore.forEach { (pid, par) -> db.products().get(pid)?.let { db.products().update(it.copy(parLevel = par.first, parManual = par.second)) } }
+        }
+        lastInventoryUndo = null
+        checkThresholds()
+        return true
+    }
+
     suspend fun snapshot(): StockSnapshot = StockSnapshot(db.stock().getAll(), db.preps().active(), today())
 
     suspend fun totals(): Map<Long, Double> = db.stock().totals().associate { it.productId to it.total }
 
-    suspend fun addBatch(productId: Long, qty: Double, expiresDay: Long? = null, note: String = "") {
+    suspend fun addBatch(productId: Long, qty: Double, expiresDay: Long? = null, note: String = "", approx: Boolean = false) {
         if (qty <= 0) return
-        db.stock().insert(StockItem(productId = productId, qty = qty, purchasedDay = today(), expiresDay = expiresDay, note = note))
+        db.stock().insert(StockItem(productId = productId, qty = qty, purchasedDay = today(), expiresDay = expiresDay, note = note, approx = approx))
         checkThresholds()
     }
 

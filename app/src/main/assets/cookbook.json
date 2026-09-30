@@ -1,0 +1,1953 @@
+{
+ "version": 1,
+ "defaults": {
+  "fish": {
+   "method": "NINJA_AIRFRY",
+   "steps": [
+    "Филе обсушить, лимон и перец, без соли или минимум.",
+    "Air Fry 200 °C 8–12 минут до 63 °C внутри, проверить по толщине куска.",
+    "Альтернатива: сковорода с каплей масла по 3–4 минуты с каждой стороны.",
+    "Подать с овощами."
+   ]
+  },
+  "seafood": {
+   "method": "PAN",
+   "steps": [
+    "Капля масла на сковороде.",
+    "Морепродукты 4–5 минут, помешивая.",
+    "Лимон и зелень, без соли или минимум."
+   ]
+  },
+  "poultry": {
+   "method": "NINJA_GRILL",
+   "steps": [
+    "Филе обсушить, специи без соли или минимум.",
+    "Ninja Grill 230 °C 10–14 минут до 74 °C, проверить по толщине куска.",
+    "Альтернатива: су-вид 62–65 °C 1–1,5 часа.",
+    "Дать отдохнуть 3 минуты."
+   ]
+  },
+  "poultry_bone": {
+   "method": "OVEN",
+   "steps": [
+    "Обсушить, паприка и чеснок.",
+    "Духовка 200 °C 30–35 минут до 74 °C у кости.",
+    "Дать отдохнуть 5 минут."
+   ]
+  },
+  "red_meat": {
+   "method": "NINJA_GRILL",
+   "steps": [
+    "Мясо достать за 15 минут, обсушить, перец.",
+    "Ninja Grill 230 °C 8–12 минут, проверить по толщине куска.",
+    "Отдохнуть 5 минут под фольгой."
+   ]
+  },
+  "egg": {
+   "method": "BOIL",
+   "steps": [
+    "Яйца в кипящую воду на 8–10 минут.",
+    "Остудить в холодной воде.",
+    "Или омлет на сковороде 4 минуты под крышкой."
+   ]
+  },
+  "veg": {
+   "method": "NINJA_AIRFRY",
+   "steps": [
+    "Овощи нарезать крупно.",
+    "Air Fry 200 °C 8–12 минут с каплей масла или подать сырыми.",
+    "Лимон и зелень вместо соли."
+   ]
+  },
+  "grain": {
+   "method": "BOIL",
+   "steps": [
+    "Крупу промыть.",
+    "Варить по инструкции на упаковке.",
+    "Готовую крупу хранить в холодильнике до 3 суток."
+   ]
+  },
+  "potato": {
+   "method": "NINJA_AIRFRY",
+   "steps": [
+    "Кубики 2 см, капля масла, паприка.",
+    "Air Fry 200 °C 20–25 минут, перемешать на середине.",
+    "Из заготовки: разогреть 4 минуты."
+   ]
+  },
+  "dairy": {
+   "method": "RAW",
+   "steps": [
+    "Выложить в миску.",
+    "Добавить фрукты или овощи.",
+    "Готово."
+   ]
+  },
+  "fruit": {
+   "method": "RAW",
+   "steps": [
+    "Вымыть.",
+    "Нарезать.",
+    "Подать."
+   ]
+  }
+ },
+ "recipes": [
+  {
+   "id": "b01",
+   "title": "Яйца пашот с овощами",
+   "slots": [
+    "З"
+   ],
+   "tags": [
+    "egg",
+    "home"
+   ],
+   "method": "BOIL",
+   "activeMin": 8,
+   "totalMin": 10,
+   "rawToCooked": 1.0,
+   "source": "generated",
+   "steps": [
+    "Довести воду до слабого кипения, без соли или минимум.",
+    "Разбить яйца по одному в воронку и варить 3–4 минуты.",
+    "Овощи нарезать крупно.",
+    "Подать яйца на овощах, хлеб отдельно."
+   ],
+   "ingredients": [
+    {
+     "ref": "protein:egg",
+     "pieces": 3
+    },
+    {
+     "ref": "veg",
+     "grams": 150
+    },
+    {
+     "ref": "carb:bread",
+     "grams": 30,
+     "optional": true
+    }
+   ]
+  },
+  {
+   "id": "b02",
+   "title": "Омлет с зеленью и овощами",
+   "slots": [
+    "З"
+   ],
+   "tags": [
+    "egg",
+    "home"
+   ],
+   "method": "PAN",
+   "activeMin": 8,
+   "totalMin": 10,
+   "rawToCooked": 1.0,
+   "source": "plan",
+   "steps": [
+    "Яйца взбить с 1 ст. л. воды.",
+    "На сковороде 1 ч. л. масла, овощи 2 минуты.",
+    "Влить яйца, накрыть крышкой, слабый огонь 3–4 минуты.",
+    "Посыпать зеленью, без соли или минимум."
+   ],
+   "ingredients": [
+    {
+     "ref": "protein:egg",
+     "pieces": 3
+    },
+    {
+     "ref": "veg",
+     "grams": 120
+    },
+    {
+     "ref": "fat:oil",
+     "grams": 5,
+     "optional": true
+    },
+    {
+     "ref": "carb:bread",
+     "grams": 30,
+     "optional": true
+    }
+   ]
+  },
+  {
+   "id": "b03",
+   "title": "Творог с фруктами и орехами",
+   "slots": [
+    "З",
+    "П"
+   ],
+   "tags": [
+    "home"
+   ],
+   "method": "RAW",
+   "activeMin": 3,
+   "totalMin": 3,
+   "rawToCooked": 1.0,
+   "source": "generated",
+   "steps": [
+    "Творог выложить в миску.",
+    "Фрукты нарезать сверху.",
+    "Посыпать орехами."
+   ],
+   "ingredients": [
+    {
+     "ref": "dairy:soft",
+     "grams": 250
+    },
+    {
+     "ref": "fruit",
+     "grams": 150
+    },
+    {
+     "ref": "fat:nuts",
+     "grams": 15,
+     "optional": true
+    }
+   ]
+  },
+  {
+   "id": "b04",
+   "title": "Овсянка на молоке с йогуртом",
+   "slots": [
+    "З"
+   ],
+   "tags": [
+    "home"
+   ],
+   "method": "BOIL",
+   "activeMin": 7,
+   "totalMin": 10,
+   "rawToCooked": 1.0,
+   "source": "generated",
+   "steps": [
+    "Овсянку залить горячей водой или молоком и варить 3–4 минуты.",
+    "Снять с огня, дать постоять 2 минуты.",
+    "Добавить йогурт или творог для белка.",
+    "Сверху ягоды и орехи."
+   ],
+   "ingredients": [
+    {
+     "ref": "product:oats",
+     "grams": 40
+    },
+    {
+     "ref": "dairy:soft",
+     "grams": 200
+    },
+    {
+     "ref": "fruit:berries",
+     "grams": 100,
+     "optional": true
+    },
+    {
+     "ref": "fat:nuts",
+     "grams": 15,
+     "optional": true
+    }
+   ]
+  },
+  {
+   "id": "b05",
+   "title": "Овсянка на ночь",
+   "slots": [
+    "З"
+   ],
+   "tags": [
+    "home",
+    "prep"
+   ],
+   "method": "RAW",
+   "activeMin": 5,
+   "totalMin": 480,
+   "rawToCooked": 1.0,
+   "source": "plan",
+   "steps": [
+    "В банку овсянку и йогурт, щепотка корицы, перемешать.",
+    "Сверху ягоды, закрыть.",
+    "Убрать в холодильник на ночь.",
+    "Утром добавить орехи."
+   ],
+   "ingredients": [
+    {
+     "ref": "product:oats",
+     "grams": 40
+    },
+    {
+     "ref": "dairy:soft",
+     "grams": 200
+    },
+    {
+     "ref": "fruit:berries",
+     "grams": 100,
+     "optional": true
+    },
+    {
+     "ref": "fat:nuts",
+     "grams": 15,
+     "optional": true
+    }
+   ]
+  },
+  {
+   "id": "b06",
+   "title": "Тост с яйцом и авокадо",
+   "slots": [
+    "З"
+   ],
+   "tags": [
+    "egg",
+    "home"
+   ],
+   "method": "PAN",
+   "activeMin": 8,
+   "totalMin": 10,
+   "rawToCooked": 1.0,
+   "source": "generated",
+   "steps": [
+    "Хлеб подсушить на сухой сковороде.",
+    "Яйца пожарить на капле масла 3 минуты под крышкой.",
+    "Авокадо размять вилкой с лимоном.",
+    "Собрать тосты, перец по вкусу, без соли или минимум."
+   ],
+   "ingredients": [
+    {
+     "ref": "carb:bread",
+     "grams": 60
+    },
+    {
+     "ref": "protein:egg",
+     "pieces": 2
+    },
+    {
+     "ref": "product:avocado",
+     "pieces": 0.5
+    }
+   ]
+  },
+  {
+   "id": "b07",
+   "title": "Яйца вкрутую с творогом и овощами",
+   "slots": [
+    "З"
+   ],
+   "tags": [
+    "egg",
+    "home"
+   ],
+   "method": "BOIL",
+   "activeMin": 5,
+   "totalMin": 12,
+   "rawToCooked": 1.0,
+   "source": "plan",
+   "steps": [
+    "Яйца опустить в кипящую воду на 10 минут.",
+    "Остудить в холодной воде 3 минуты.",
+    "Овощи нарезать.",
+    "Подать с творогом."
+   ],
+   "ingredients": [
+    {
+     "ref": "protein:egg",
+     "pieces": 2
+    },
+    {
+     "ref": "dairy:soft",
+     "grams": 200
+    },
+    {
+     "ref": "veg",
+     "grams": 150
+    }
+   ]
+  },
+  {
+   "id": "b08",
+   "title": "Шакшука быстрая",
+   "slots": [
+    "З",
+    "О",
+    "У"
+   ],
+   "tags": [
+    "egg",
+    "home"
+   ],
+   "method": "PAN",
+   "activeMin": 12,
+   "totalMin": 18,
+   "rawToCooked": 1.0,
+   "source": "plan",
+   "steps": [
+    "На сковороде масло и лук или перец 3 минуты.",
+    "Добавить помидоры и паприку, тушить 8 минут, без соли или минимум.",
+    "Сделать углубления, разбить яйца, накрыть на 5–6 минут.",
+    "Подать с сыром и хлебом отдельно."
+   ],
+   "ingredients": [
+    {
+     "ref": "protein:egg",
+     "pieces": 3
+    },
+    {
+     "ref": "veg:tomato",
+     "grams": 250
+    },
+    {
+     "ref": "veg",
+     "grams": 80,
+     "optional": true
+    },
+    {
+     "ref": "fat:oil",
+     "grams": 5,
+     "optional": true
+    },
+    {
+     "ref": "dairy:cheese",
+     "grams": 50,
+     "optional": true
+    },
+    {
+     "ref": "carb:bread",
+     "grams": 60,
+     "optional": true
+    }
+   ]
+  },
+  {
+   "id": "b09",
+   "title": "Йогурт с ягодами и овсянкой",
+   "slots": [
+    "З",
+    "П",
+    "Е"
+   ],
+   "tags": [
+    "home"
+   ],
+   "method": "RAW",
+   "activeMin": 3,
+   "totalMin": 3,
+   "rawToCooked": 1.0,
+   "source": "generated",
+   "steps": [
+    "Йогурт в миску.",
+    "Сверху ягоды.",
+    "Посыпать хлопьями."
+   ],
+   "ingredients": [
+    {
+     "ref": "dairy:soft",
+     "grams": 200
+    },
+    {
+     "ref": "fruit:berries",
+     "grams": 100
+    },
+    {
+     "ref": "product:oats",
+     "grams": 30,
+     "optional": true
+    }
+   ]
+  },
+  {
+   "id": "b10",
+   "title": "Омлет с сыром и помидором",
+   "slots": [
+    "З",
+    "У"
+   ],
+   "tags": [
+    "egg",
+    "home"
+   ],
+   "method": "PAN",
+   "activeMin": 8,
+   "totalMin": 10,
+   "rawToCooked": 1.0,
+   "source": "generated",
+   "steps": [
+    "Яйца взбить.",
+    "Помидор кубиками обжарить 2 минуты на капле масла.",
+    "Влить яйца, сверху сыр, накрыть на 4 минуты.",
+    "Без соли или минимум: сыр уже солёный."
+   ],
+   "ingredients": [
+    {
+     "ref": "protein:egg",
+     "pieces": 3
+    },
+    {
+     "ref": "dairy:cheese",
+     "grams": 40
+    },
+    {
+     "ref": "veg:tomato",
+     "grams": 120
+    },
+    {
+     "ref": "fat:oil",
+     "grams": 5,
+     "optional": true
+    }
+   ]
+  },
+  {
+   "id": "f01",
+   "title": "Лосось су-вид с овощами",
+   "slots": [
+    "О",
+    "У"
+   ],
+   "tags": [
+    "fish",
+    "fatty_fish",
+    "home"
+   ],
+   "method": "SOUSVIDE",
+   "activeMin": 10,
+   "totalMin": 45,
+   "rawToCooked": 0.9,
+   "source": "generated",
+   "steps": [
+    "Филе обсушить, перец и лимон, без соли или минимум.",
+    "Су-вид 50–52 °C, 30–40 минут, проверить по толщине куска.",
+    "Овощи запечь в Ninja 200 °C 10 минут.",
+    "Подать рыбу с овощами и гарниром."
+   ],
+   "ingredients": [
+    {
+     "ref": "protein:fish_fatty",
+     "grams": 180
+    },
+    {
+     "ref": "veg",
+     "grams": 200
+    },
+    {
+     "ref": "fat:oil",
+     "grams": 5,
+     "optional": true
+    },
+    {
+     "ref": "carb:potato",
+     "grams": 200,
+     "optional": true
+    }
+   ]
+  },
+  {
+   "id": "f02",
+   "title": "Белая рыба в Ninja с овощами",
+   "slots": [
+    "О",
+    "У"
+   ],
+   "tags": [
+    "fish",
+    "home"
+   ],
+   "method": "NINJA_AIRFRY",
+   "activeMin": 8,
+   "totalMin": 20,
+   "rawToCooked": 0.85,
+   "source": "plan",
+   "steps": [
+    "Филе сбрызнуть лимоном, паприка и чесночный порошок.",
+    "Air Fry 200 °C, 8–12 минут до 63 °C внутри, проверить по толщине куска.",
+    "Овощи положить рядом на последние 6 минут.",
+    "Подать с гарниром."
+   ],
+   "ingredients": [
+    {
+     "ref": "protein:fish_white",
+     "grams": 200
+    },
+    {
+     "ref": "veg",
+     "grams": 200
+    },
+    {
+     "ref": "fat:oil",
+     "grams": 5,
+     "optional": true
+    },
+    {
+     "ref": "carb:potato",
+     "grams": 250,
+     "optional": true
+    }
+   ]
+  },
+  {
+   "id": "f03",
+   "title": "Креветки на сковороде с кабачком",
+   "slots": [
+    "О",
+    "У"
+   ],
+   "tags": [
+    "seafood",
+    "home"
+   ],
+   "method": "PAN",
+   "activeMin": 12,
+   "totalMin": 15,
+   "rawToCooked": 0.85,
+   "source": "plan",
+   "steps": [
+    "Кабачок полукольцами обжарить 4 минуты на капле масла.",
+    "Добавить креветки, паприку и чеснок, 4–5 минут до розового цвета.",
+    "Сбрызнуть лимоном, без соли или минимум.",
+    "Подать с рисом или без гарнира."
+   ],
+   "ingredients": [
+    {
+     "ref": "protein:seafood",
+     "grams": 200
+    },
+    {
+     "ref": "veg",
+     "grams": 150
+    },
+    {
+     "ref": "fat:oil",
+     "grams": 5,
+     "optional": true
+    },
+    {
+     "ref": "carb:grain",
+     "grams": 150,
+     "optional": true
+    }
+   ]
+  },
+  {
+   "id": "f04",
+   "title": "Тунец с салатом",
+   "slots": [
+    "О",
+    "С"
+   ],
+   "tags": [
+    "fish",
+    "home"
+   ],
+   "method": "RAW",
+   "activeMin": 8,
+   "totalMin": 8,
+   "rawToCooked": 1.0,
+   "source": "plan",
+   "steps": [
+    "Овощи и зелень нарезать в миску.",
+    "Добавить тунец, слив жидкость.",
+    "Заправка: масло и лимон, без соли или минимум.",
+    "Хлеб отдельно."
+   ],
+   "ingredients": [
+    {
+     "ref": "protein:fish",
+     "grams": 120
+    },
+    {
+     "ref": "veg",
+     "grams": 200
+    },
+    {
+     "ref": "protein:egg",
+     "pieces": 2,
+     "optional": true
+    },
+    {
+     "ref": "fat:oil",
+     "grams": 10,
+     "optional": true
+    },
+    {
+     "ref": "carb:bread",
+     "grams": 60,
+     "optional": true
+    }
+   ]
+  },
+  {
+   "id": "f05",
+   "title": "Скумбрия из духовки",
+   "slots": [
+    "У"
+   ],
+   "tags": [
+    "fish",
+    "fatty_fish",
+    "home"
+   ],
+   "method": "OVEN",
+   "activeMin": 8,
+   "totalMin": 25,
+   "rawToCooked": 0.85,
+   "source": "plan",
+   "steps": [
+    "Филе на противень кожей вниз, лимон и перец.",
+    "Духовка 200 °C, 12–15 минут до 63 °C внутри, проверить по толщине куска.",
+    "Овощи запечь на соседнем противне.",
+    "Подать с картофелем."
+   ],
+   "ingredients": [
+    {
+     "ref": "protein:fish_fatty",
+     "grams": 160
+    },
+    {
+     "ref": "veg",
+     "grams": 200
+    },
+    {
+     "ref": "carb:potato",
+     "grams": 250,
+     "optional": true
+    }
+   ]
+  },
+  {
+   "id": "f06",
+   "title": "Кальмар отварной с огурцом",
+   "slots": [
+    "О",
+    "У"
+   ],
+   "tags": [
+    "seafood",
+    "home"
+   ],
+   "method": "BOIL",
+   "activeMin": 10,
+   "totalMin": 15,
+   "rawToCooked": 0.8,
+   "source": "generated",
+   "steps": [
+    "Кальмар опустить в кипящую воду на 1–2 минуты, не дольше.",
+    "Остудить и нарезать кольцами.",
+    "Огурец и зелень нарезать, смешать.",
+    "Заправить лимоном и каплей масла."
+   ],
+   "ingredients": [
+    {
+     "ref": "protein:seafood",
+     "grams": 200
+    },
+    {
+     "ref": "veg",
+     "grams": 200
+    },
+    {
+     "ref": "fat:oil",
+     "grams": 5,
+     "optional": true
+    }
+   ]
+  },
+  {
+   "id": "f07",
+   "title": "Лосось в Ninja с бататом",
+   "slots": [
+    "У"
+   ],
+   "tags": [
+    "fish",
+    "fatty_fish",
+    "home",
+    "prep"
+   ],
+   "method": "NINJA_AIRFRY",
+   "activeMin": 10,
+   "totalMin": 20,
+   "rawToCooked": 0.85,
+   "source": "plan",
+   "steps": [
+    "Филе смазать маслом, лимон, паприка.",
+    "Air Fry 190 °C, 9–14 минут до 63 °C, проверить по толщине куска.",
+    "Брокколи рядом на последние 8 минут.",
+    "Батат из заготовки разогреть."
+   ],
+   "ingredients": [
+    {
+     "ref": "protein:fish_fatty",
+     "grams": 180
+    },
+    {
+     "ref": "carb:potato",
+     "grams": 200
+    },
+    {
+     "ref": "veg",
+     "grams": 100
+    },
+    {
+     "ref": "fat:oil",
+     "grams": 5,
+     "optional": true
+    }
+   ]
+  },
+  {
+   "id": "f08",
+   "title": "Треска с пастой и томатным соусом",
+   "slots": [
+    "У"
+   ],
+   "tags": [
+    "fish",
+    "home"
+   ],
+   "method": "NINJA_AIRFRY",
+   "activeMin": 12,
+   "totalMin": 20,
+   "rawToCooked": 0.85,
+   "source": "plan",
+   "steps": [
+    "Филе с лимоном и паприкой, Air Fry 200 °C 10–14 минут, проверить по толщине куска.",
+    "Пасту сварить 9–10 минут.",
+    "Соус: томаты, чеснок, орегано, 5 минут.",
+    "Смешать пасту с соусом, сверху рыба."
+   ],
+   "ingredients": [
+    {
+     "ref": "protein:fish_white",
+     "grams": 200
+    },
+    {
+     "ref": "carb:grain",
+     "grams": 60
+    },
+    {
+     "ref": "sauce:tomato",
+     "grams": 150
+    },
+    {
+     "ref": "fat:oil",
+     "grams": 5,
+     "optional": true
+    }
+   ]
+  },
+  {
+   "id": "f09",
+   "title": "Рыба на гриле с салатом",
+   "slots": [
+    "О",
+    "У"
+   ],
+   "tags": [
+    "fish",
+    "home"
+   ],
+   "method": "NINJA_GRILL",
+   "activeMin": 8,
+   "totalMin": 15,
+   "rawToCooked": 0.85,
+   "source": "generated",
+   "steps": [
+    "Филе обсушить, лимон и перец.",
+    "Ninja Grill 230 °C, 6–10 минут, проверить по толщине куска.",
+    "Салат нарезать, заправить лимоном.",
+    "Подать вместе."
+   ],
+   "ingredients": [
+    {
+     "ref": "protein:fish",
+     "grams": 200
+    },
+    {
+     "ref": "veg:leafy",
+     "grams": 100
+    },
+    {
+     "ref": "veg",
+     "grams": 150
+    },
+    {
+     "ref": "fat:oil",
+     "grams": 5,
+     "optional": true
+    }
+   ]
+  },
+  {
+   "id": "f10",
+   "title": "Креветки с рисом и авокадо",
+   "slots": [
+    "О",
+    "У"
+   ],
+   "tags": [
+    "seafood",
+    "home"
+   ],
+   "method": "NINJA_AIRFRY",
+   "activeMin": 10,
+   "totalMin": 15,
+   "rawToCooked": 0.85,
+   "source": "plan",
+   "steps": [
+    "Кабачок или овощи Air Fry 200 °C 5 минут.",
+    "Добавить креветки с паприкой и лимоном, ещё 7 минут.",
+    "Рис разогреть 90 секунд.",
+    "Подать с авокадо."
+   ],
+   "ingredients": [
+    {
+     "ref": "protein:seafood",
+     "grams": 200
+    },
+    {
+     "ref": "carb:grain",
+     "grams": 150
+    },
+    {
+     "ref": "product:avocado",
+     "pieces": 0.5,
+     "optional": true
+    },
+    {
+     "ref": "veg",
+     "grams": 100,
+     "optional": true
+    }
+   ]
+  },
+  {
+   "id": "f11",
+   "title": "Сёмга с гречкой и огурцом",
+   "slots": [
+    "О",
+    "У"
+   ],
+   "tags": [
+    "fish",
+    "fatty_fish",
+    "home"
+   ],
+   "method": "NINJA_AIRFRY",
+   "activeMin": 10,
+   "totalMin": 20,
+   "rawToCooked": 0.85,
+   "source": "generated",
+   "steps": [
+    "Филе Air Fry 190 °C 9–12 минут, проверить по толщине куска.",
+    "Гречку сварить заранее или разогреть.",
+    "Огурец нарезать.",
+    "Собрать тарелку, без соли или минимум."
+   ],
+   "ingredients": [
+    {
+     "ref": "protein:fish_fatty",
+     "grams": 150
+    },
+    {
+     "ref": "carb:grain",
+     "grams": 150
+    },
+    {
+     "ref": "veg",
+     "grams": 150
+    }
+   ]
+  },
+  {
+   "id": "f12",
+   "title": "Рыбные котлеты из белой рыбы",
+   "slots": [
+    "О",
+    "У"
+   ],
+   "tags": [
+    "fish",
+    "egg",
+    "home"
+   ],
+   "method": "PAN",
+   "activeMin": 20,
+   "totalMin": 30,
+   "rawToCooked": 0.9,
+   "source": "generated",
+   "steps": [
+    "Рыбу мелко порубить с яйцом и зеленью, без соли или минимум.",
+    "Сформовать 4 котлеты.",
+    "Жарить на капле масла по 4 минуты с каждой стороны.",
+    "Подать с овощами."
+   ],
+   "ingredients": [
+    {
+     "ref": "protein:fish_white",
+     "grams": 250
+    },
+    {
+     "ref": "protein:egg",
+     "pieces": 1
+    },
+    {
+     "ref": "veg",
+     "grams": 150
+    },
+    {
+     "ref": "fat:oil",
+     "grams": 5,
+     "optional": true
+    }
+   ]
+  },
+  {
+   "id": "f13",
+   "title": "Тунец с фасолью и помидорами",
+   "slots": [
+    "О",
+    "С"
+   ],
+   "tags": [
+    "fish",
+    "home"
+   ],
+   "method": "RAW",
+   "activeMin": 6,
+   "totalMin": 6,
+   "rawToCooked": 1.0,
+   "source": "generated",
+   "steps": [
+    "Тунец и фасоль слить.",
+    "Помидоры и лук нарезать.",
+    "Смешать, заправить лимоном и маслом.",
+    "Без соли или минимум."
+   ],
+   "ingredients": [
+    {
+     "ref": "protein:fish",
+     "grams": 120
+    },
+    {
+     "ref": "carb:legume",
+     "grams": 120
+    },
+    {
+     "ref": "veg:tomato",
+     "grams": 150
+    },
+    {
+     "ref": "fat:oil",
+     "grams": 5,
+     "optional": true
+    }
+   ]
+  },
+  {
+   "id": "f14",
+   "title": "Мидии в томатах",
+   "slots": [
+    "У"
+   ],
+   "tags": [
+    "seafood",
+    "home"
+   ],
+   "method": "PAN",
+   "activeMin": 12,
+   "totalMin": 20,
+   "rawToCooked": 0.8,
+   "source": "generated",
+   "steps": [
+    "Лук и чеснок на капле масла 3 минуты.",
+    "Добавить томаты и мидии, накрыть на 6–8 минут.",
+    "Посыпать зеленью, без соли или минимум.",
+    "Хлеб отдельно."
+   ],
+   "ingredients": [
+    {
+     "ref": "protein:seafood",
+     "grams": 250
+    },
+    {
+     "ref": "sauce:tomato",
+     "grams": 150
+    },
+    {
+     "ref": "veg",
+     "grams": 80,
+     "optional": true
+    },
+    {
+     "ref": "carb:bread",
+     "grams": 60,
+     "optional": true
+    }
+   ]
+  },
+  {
+   "id": "m01",
+   "title": "Куриное филе су-вид с овощами",
+   "slots": [
+    "О",
+    "У",
+    "С"
+   ],
+   "tags": [
+    "home"
+   ],
+   "method": "SOUSVIDE",
+   "activeMin": 10,
+   "totalMin": 90,
+   "rawToCooked": 0.8,
+   "source": "generated",
+   "steps": [
+    "Филе обсушить, паприка и чесночный порошок.",
+    "Су-вид 62–65 °C, 1–1,5 часа, проверить по толщине куска.",
+    "Для корочки 3 минуты в Ninja 200 °C.",
+    "Подать с овощами."
+   ],
+   "ingredients": [
+    {
+     "ref": "protein:poultry",
+     "grams": 200
+    },
+    {
+     "ref": "veg",
+     "grams": 200
+    },
+    {
+     "ref": "carb:potato",
+     "grams": 200,
+     "optional": true
+    },
+    {
+     "ref": "fat:oil",
+     "grams": 5,
+     "optional": true
+    }
+   ]
+  },
+  {
+   "id": "m02",
+   "title": "Грудка в Ninja с овощами",
+   "slots": [
+    "О",
+    "У"
+   ],
+   "tags": [
+    "home"
+   ],
+   "method": "NINJA_AIRFRY",
+   "activeMin": 10,
+   "totalMin": 25,
+   "rawToCooked": 0.8,
+   "source": "generated",
+   "steps": [
+    "Грудку разрезать вдоль пополам, специи без соли или минимум.",
+    "Air Fry 200 °C 12–16 минут до 74 °C, проверить по толщине куска.",
+    "Овощи рядом на последние 8 минут.",
+    "Дать отдохнуть 3 минуты."
+   ],
+   "ingredients": [
+    {
+     "ref": "protein:poultry",
+     "grams": 200
+    },
+    {
+     "ref": "veg",
+     "grams": 250
+    },
+    {
+     "ref": "fat:oil",
+     "grams": 5,
+     "optional": true
+    }
+   ]
+  },
+  {
+   "id": "m03",
+   "title": "Куриные бёдра в духовке",
+   "slots": [
+    "У"
+   ],
+   "tags": [
+    "home"
+   ],
+   "method": "OVEN",
+   "activeMin": 10,
+   "totalMin": 40,
+   "rawToCooked": 0.75,
+   "source": "generated",
+   "steps": [
+    "Бёдра обсушить, паприка и чеснок.",
+    "Духовка 200 °C 30–35 минут до 74 °C у кости.",
+    "Овощи на тот же противень на последние 15 минут.",
+    "Подать с гарниром."
+   ],
+   "ingredients": [
+    {
+     "ref": "protein:poultry_bone",
+     "grams": 300
+    },
+    {
+     "ref": "veg",
+     "grams": 200
+    },
+    {
+     "ref": "carb:potato",
+     "grams": 200,
+     "optional": true
+    }
+   ]
+  },
+  {
+   "id": "m04",
+   "title": "Индейка с гречкой",
+   "slots": [
+    "О",
+    "У"
+   ],
+   "tags": [
+    "home"
+   ],
+   "method": "PAN",
+   "activeMin": 12,
+   "totalMin": 20,
+   "rawToCooked": 0.8,
+   "source": "generated",
+   "steps": [
+    "Индейку нарезать полосками.",
+    "Обжарить на капле масла 6–8 минут.",
+    "Добавить овощи на 3 минуты.",
+    "Подать с гречкой."
+   ],
+   "ingredients": [
+    {
+     "ref": "protein:poultry",
+     "grams": 180
+    },
+    {
+     "ref": "carb:grain",
+     "grams": 150
+    },
+    {
+     "ref": "veg",
+     "grams": 150
+    },
+    {
+     "ref": "fat:oil",
+     "grams": 5,
+     "optional": true
+    }
+   ]
+  },
+  {
+   "id": "m05",
+   "title": "Говядина на гриле с картофелем",
+   "slots": [
+    "У"
+   ],
+   "tags": [
+    "red_meat",
+    "home"
+   ],
+   "method": "NINJA_GRILL",
+   "activeMin": 10,
+   "totalMin": 25,
+   "rawToCooked": 0.75,
+   "source": "plan",
+   "steps": [
+    "Стейк достать за 15 минут, обсушить, перец.",
+    "Ninja Grill 230 °C 8–12 минут до 57–60 °C, проверить по толщине куска.",
+    "Отдохнуть 5 минут под фольгой.",
+    "Подать с картофелем и овощами."
+   ],
+   "ingredients": [
+    {
+     "ref": "protein:red_meat",
+     "grams": 160
+    },
+    {
+     "ref": "carb:potato",
+     "grams": 250
+    },
+    {
+     "ref": "veg",
+     "grams": 150
+    }
+   ]
+  },
+  {
+   "id": "m06",
+   "title": "Свиная вырезка с бататом",
+   "slots": [
+    "У"
+   ],
+   "tags": [
+    "red_meat",
+    "home"
+   ],
+   "method": "NINJA_AIRFRY",
+   "activeMin": 12,
+   "totalMin": 25,
+   "rawToCooked": 0.8,
+   "source": "plan",
+   "steps": [
+    "Батат кубиками Air Fry 200 °C 12 минут.",
+    "Вырезку медальонами, паприка и чеснок.",
+    "Добавить к батату ещё 10–12 минут до 63 °C, проверить по толщине куска.",
+    "Отдохнуть 3 минуты, подать с салатом."
+   ],
+   "ingredients": [
+    {
+     "ref": "protein:red_meat",
+     "grams": 180
+    },
+    {
+     "ref": "carb:potato",
+     "grams": 200
+    },
+    {
+     "ref": "veg:leafy",
+     "grams": 80,
+     "optional": true
+    }
+   ]
+  },
+  {
+   "id": "m07",
+   "title": "Курица с картофелем из заготовки",
+   "slots": [
+    "О",
+    "У",
+    "С"
+   ],
+   "tags": [
+    "home",
+    "prep"
+   ],
+   "method": "NINJA_AIRFRY",
+   "activeMin": 5,
+   "totalMin": 8,
+   "rawToCooked": 1.0,
+   "source": "plan",
+   "steps": [
+    "Курицу и картофель из заготовки разогреть 4 минуты в Ninja 180 °C.",
+    "Салат нарезать.",
+    "Заправить лимоном.",
+    "Подать."
+   ],
+   "ingredients": [
+    {
+     "ref": "product:chicken_sv",
+     "grams": 150
+    },
+    {
+     "ref": "carb:potato",
+     "grams": 250
+    },
+    {
+     "ref": "veg",
+     "grams": 150
+    }
+   ]
+  },
+  {
+   "id": "m08",
+   "title": "Курица с рисом и овощами",
+   "slots": [
+    "О",
+    "С"
+   ],
+   "tags": [
+    "home"
+   ],
+   "method": "RAW",
+   "activeMin": 5,
+   "totalMin": 5,
+   "rawToCooked": 1.0,
+   "source": "plan",
+   "steps": [
+    "Курицу из заготовки нарезать.",
+    "Рис разогреть или взять холодным.",
+    "Добавить овощи.",
+    "Сложить в контейнер."
+   ],
+   "ingredients": [
+    {
+     "ref": "protein:poultry",
+     "grams": 150
+    },
+    {
+     "ref": "carb:grain",
+     "grams": 150
+    },
+    {
+     "ref": "veg",
+     "grams": 150
+    }
+   ]
+  },
+  {
+   "id": "m09",
+   "title": "Фарш индейки с овощами",
+   "slots": [
+    "О",
+    "У"
+   ],
+   "tags": [
+    "home"
+   ],
+   "method": "PAN",
+   "activeMin": 15,
+   "totalMin": 20,
+   "rawToCooked": 0.8,
+   "source": "generated",
+   "steps": [
+    "Фарш обжарить на капле масла 7–8 минут, разбивая комки.",
+    "Добавить нарезанные овощи на 5 минут.",
+    "Специи без соли или минимум.",
+    "Подать с гарниром."
+   ],
+   "ingredients": [
+    {
+     "ref": "protein:poultry",
+     "grams": 200
+    },
+    {
+     "ref": "veg",
+     "grams": 250
+    },
+    {
+     "ref": "carb:grain",
+     "grams": 150,
+     "optional": true
+    },
+    {
+     "ref": "fat:oil",
+     "grams": 5,
+     "optional": true
+    }
+   ]
+  },
+  {
+   "id": "m10",
+   "title": "Куриная печень с луком",
+   "slots": [
+    "У"
+   ],
+   "tags": [
+    "home"
+   ],
+   "method": "PAN",
+   "activeMin": 12,
+   "totalMin": 15,
+   "rawToCooked": 0.8,
+   "source": "generated",
+   "steps": [
+    "Печень обсушить, удалить плёнки.",
+    "Лук обжарить на капле масла 3 минуты.",
+    "Добавить печень, 3–4 минуты с каждой стороны до розового среза.",
+    "Подать с гарниром."
+   ],
+   "ingredients": [
+    {
+     "ref": "product:ref:куриная печень сырая",
+     "grams": 200
+    },
+    {
+     "ref": "veg",
+     "grams": 120
+    },
+    {
+     "ref": "carb:grain",
+     "grams": 150,
+     "optional": true
+    },
+    {
+     "ref": "fat:oil",
+     "grams": 5,
+     "optional": true
+    }
+   ]
+  },
+  {
+   "id": "v01",
+   "title": "Запечённые овощи с творогом",
+   "slots": [
+    "О",
+    "У"
+   ],
+   "tags": [
+    "home"
+   ],
+   "method": "NINJA_AIRFRY",
+   "activeMin": 8,
+   "totalMin": 20,
+   "rawToCooked": 1.0,
+   "source": "generated",
+   "steps": [
+    "Овощи нарезать крупно, капля масла, паприка.",
+    "Air Fry 200 °C 12–15 минут, перемешать на середине.",
+    "Творог смешать с зеленью.",
+    "Подать вместе."
+   ],
+   "ingredients": [
+    {
+     "ref": "veg",
+     "grams": 350
+    },
+    {
+     "ref": "dairy:soft",
+     "grams": 200
+    },
+    {
+     "ref": "fat:oil",
+     "grams": 5,
+     "optional": true
+    }
+   ]
+  },
+  {
+   "id": "v02",
+   "title": "Чечевица с яйцом",
+   "slots": [
+    "О",
+    "У"
+   ],
+   "tags": [
+    "egg",
+    "home"
+   ],
+   "method": "BOIL",
+   "activeMin": 10,
+   "totalMin": 25,
+   "rawToCooked": 1.0,
+   "source": "generated",
+   "steps": [
+    "Чечевицу сварить или разогреть готовую.",
+    "Яйца сварить 8–10 минут.",
+    "Добавить нарезанные овощи и зелень.",
+    "Заправить лимоном, без соли или минимум."
+   ],
+   "ingredients": [
+    {
+     "ref": "carb:legume",
+     "grams": 200
+    },
+    {
+     "ref": "protein:egg",
+     "pieces": 2
+    },
+    {
+     "ref": "veg",
+     "grams": 150
+    }
+   ]
+  },
+  {
+   "id": "v03",
+   "title": "Омлет с сыром и овощами в Ninja",
+   "slots": [
+    "О",
+    "У"
+   ],
+   "tags": [
+    "egg",
+    "home"
+   ],
+   "method": "NINJA_AIRFRY",
+   "activeMin": 8,
+   "totalMin": 15,
+   "rawToCooked": 1.0,
+   "source": "generated",
+   "steps": [
+    "Яйца взбить с овощами.",
+    "Вылить в форму, сверху сыр.",
+    "Air Fry 170 °C 10–12 минут до плотного центра.",
+    "Подать с салатом."
+   ],
+   "ingredients": [
+    {
+     "ref": "protein:egg",
+     "pieces": 3
+    },
+    {
+     "ref": "dairy:cheese",
+     "grams": 40
+    },
+    {
+     "ref": "veg",
+     "grams": 150
+    }
+   ]
+  },
+  {
+   "id": "v04",
+   "title": "Нут с овощами и тхиной",
+   "slots": [
+    "О",
+    "С"
+   ],
+   "tags": [
+    "home"
+   ],
+   "method": "RAW",
+   "activeMin": 8,
+   "totalMin": 8,
+   "rawToCooked": 1.0,
+   "source": "generated",
+   "steps": [
+    "Нут слить и промыть.",
+    "Овощи нарезать.",
+    "Заправить тхиной и лимоном.",
+    "Без соли или минимум."
+   ],
+   "ingredients": [
+    {
+     "ref": "carb:legume",
+     "grams": 200
+    },
+    {
+     "ref": "veg",
+     "grams": 200
+    },
+    {
+     "ref": "product:tahini",
+     "grams": 15,
+     "optional": true
+    }
+   ]
+  },
+  {
+   "id": "v05",
+   "title": "Творожная запеканка",
+   "slots": [
+    "З",
+    "П"
+   ],
+   "tags": [
+    "egg",
+    "home"
+   ],
+   "method": "OVEN",
+   "activeMin": 10,
+   "totalMin": 35,
+   "rawToCooked": 1.0,
+   "source": "generated",
+   "steps": [
+    "Творог смешать с яйцом.",
+    "Добавить фрукты или ягоды.",
+    "Духовка 180 °C 25–30 минут.",
+    "Остудить 5 минут."
+   ],
+   "ingredients": [
+    {
+     "ref": "dairy:soft",
+     "grams": 300
+    },
+    {
+     "ref": "protein:egg",
+     "pieces": 1
+    },
+    {
+     "ref": "fruit",
+     "grams": 100,
+     "optional": true
+    }
+   ]
+  },
+  {
+   "id": "v06",
+   "title": "Овощи гриль с сыром",
+   "slots": [
+    "О",
+    "У"
+   ],
+   "tags": [
+    "home"
+   ],
+   "method": "NINJA_GRILL",
+   "activeMin": 10,
+   "totalMin": 15,
+   "rawToCooked": 1.0,
+   "source": "generated",
+   "steps": [
+    "Овощи нарезать пластинами.",
+    "Ninja Grill 230 °C 6–8 минут.",
+    "Сверху сыр на 1 минуту.",
+    "Хлеб отдельно."
+   ],
+   "ingredients": [
+    {
+     "ref": "veg",
+     "grams": 350
+    },
+    {
+     "ref": "dairy:cheese",
+     "grams": 60
+    },
+    {
+     "ref": "carb:bread",
+     "grams": 60,
+     "optional": true
+    }
+   ]
+  },
+  {
+   "id": "s01",
+   "title": "Йогурт с ягодами",
+   "slots": [
+    "С",
+    "П",
+    "Е"
+   ],
+   "tags": [
+    "home"
+   ],
+   "method": "RAW",
+   "activeMin": 2,
+   "totalMin": 2,
+   "rawToCooked": 1.0,
+   "source": "plan",
+   "steps": [
+    "Йогурт в миску.",
+    "Ягоды сверху.",
+    "Можно заморозить ягоды заранее."
+   ],
+   "ingredients": [
+    {
+     "ref": "dairy:soft",
+     "grams": 200
+    },
+    {
+     "ref": "fruit:berries",
+     "grams": 100
+    }
+   ]
+  },
+  {
+   "id": "s02",
+   "title": "Творог с огурцом и зеленью",
+   "slots": [
+    "С",
+    "П",
+    "Е"
+   ],
+   "tags": [
+    "home"
+   ],
+   "method": "RAW",
+   "activeMin": 3,
+   "totalMin": 3,
+   "rawToCooked": 1.0,
+   "source": "plan",
+   "steps": [
+    "Огурец нарезать кубиками.",
+    "Смешать с творогом.",
+    "Зелень и перец по вкусу, без соли или минимум."
+   ],
+   "ingredients": [
+    {
+     "ref": "dairy:soft",
+     "grams": 150
+    },
+    {
+     "ref": "veg",
+     "grams": 120
+    }
+   ]
+  },
+  {
+   "id": "s03",
+   "title": "Фрукт с горстью орехов",
+   "slots": [
+    "С",
+    "П",
+    "Е"
+   ],
+   "tags": [
+    "home"
+   ],
+   "method": "RAW",
+   "activeMin": 1,
+   "totalMin": 1,
+   "rawToCooked": 1.0,
+   "source": "plan",
+   "steps": [
+    "Фрукт вымыть.",
+    "Отмерить орехи.",
+    "Взять с собой в контейнере."
+   ],
+   "ingredients": [
+    {
+     "ref": "fruit",
+     "grams": 180
+    },
+    {
+     "ref": "fat:nuts",
+     "grams": 20
+    }
+   ]
+  },
+  {
+   "id": "s04",
+   "title": "Яйцо с овощами",
+   "slots": [
+    "С",
+    "П"
+   ],
+   "tags": [
+    "egg",
+    "home"
+   ],
+   "method": "BOIL",
+   "activeMin": 3,
+   "totalMin": 12,
+   "rawToCooked": 1.0,
+   "source": "plan",
+   "steps": [
+    "Яйца сварить 10 минут или взять из заготовки.",
+    "Овощи нарезать палочками.",
+    "Сложить в контейнер."
+   ],
+   "ingredients": [
+    {
+     "ref": "protein:egg",
+     "pieces": 2
+    },
+    {
+     "ref": "veg",
+     "grams": 120
+    }
+   ]
+  },
+  {
+   "id": "s05",
+   "title": "Хумус с палочками овощей",
+   "slots": [
+    "С",
+    "П",
+    "Е"
+   ],
+   "tags": [
+    "home"
+   ],
+   "method": "RAW",
+   "activeMin": 4,
+   "totalMin": 4,
+   "rawToCooked": 1.0,
+   "source": "generated",
+   "steps": [
+    "Овощи нарезать палочками.",
+    "Хумус в маленькую баночку.",
+    "Макать овощи в хумус."
+   ],
+   "ingredients": [
+    {
+     "ref": "product:hummus",
+     "grams": 50
+    },
+    {
+     "ref": "veg",
+     "grams": 200
+    }
+   ]
+  },
+  {
+   "id": "s06",
+   "title": "Коттедж с помидором",
+   "slots": [
+    "С",
+    "П",
+    "Е"
+   ],
+   "tags": [
+    "home"
+   ],
+   "method": "RAW",
+   "activeMin": 2,
+   "totalMin": 2,
+   "rawToCooked": 1.0,
+   "source": "plan",
+   "steps": [
+    "Помидор нарезать.",
+    "Выложить с творогом.",
+    "Перец по вкусу."
+   ],
+   "ingredients": [
+    {
+     "ref": "dairy:soft",
+     "grams": 150
+    },
+    {
+     "ref": "veg:tomato",
+     "grams": 120
+    }
+   ]
+  },
+  {
+   "id": "s07",
+   "title": "Йогурт с бананом",
+   "slots": [
+    "С",
+    "П"
+   ],
+   "tags": [
+    "home"
+   ],
+   "method": "RAW",
+   "activeMin": 2,
+   "totalMin": 2,
+   "rawToCooked": 1.0,
+   "source": "plan",
+   "steps": [
+    "Банан нарезать.",
+    "Смешать с йогуртом.",
+    "Можно взбить блендером."
+   ],
+   "ingredients": [
+    {
+     "ref": "dairy:soft",
+     "grams": 200
+    },
+    {
+     "ref": "fruit",
+     "grams": 120
+    }
+   ]
+  },
+  {
+   "id": "s08",
+   "title": "Сыр с фруктом",
+   "slots": [
+    "С",
+    "П",
+    "Е"
+   ],
+   "tags": [
+    "home"
+   ],
+   "method": "RAW",
+   "activeMin": 2,
+   "totalMin": 2,
+   "rawToCooked": 1.0,
+   "source": "generated",
+   "steps": [
+    "Сыр нарезать.",
+    "Фрукт нарезать дольками.",
+    "Подать вместе."
+   ],
+   "ingredients": [
+    {
+     "ref": "dairy:cheese",
+     "grams": 40
+    },
+    {
+     "ref": "fruit",
+     "grams": 150
+    }
+   ]
+  }
+ ]
+}

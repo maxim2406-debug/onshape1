@@ -7,7 +7,12 @@ import com.ration.app.data.db.entity.PrepOutput
 import com.ration.app.data.db.entity.PrepTemplate
 import com.ration.app.data.db.entity.Product
 import com.ration.app.data.db.entity.RecipeStep
+import com.ration.app.domain.cook.Categories
+import com.ration.app.domain.library.FoodSearch
+import com.ration.app.domain.model.CookState
+import com.ration.app.domain.model.FoodRole
 import com.ration.app.domain.model.MealKind
+import com.ration.app.domain.model.ProductSource
 import com.ration.app.domain.model.MealKind.BREAKFAST
 import com.ration.app.domain.model.MealKind.DINNER
 import com.ration.app.domain.model.MealKind.EVENING
@@ -53,67 +58,69 @@ object SeedData {
         val key: String, val name: String, val unit: MeasureUnit, val kcal: Double, val protein: Double,
         val aliases: List<String> = emptyList(), val storage: Storage = FRIDGE, val category: String = "",
         val gpp: Double? = null, val untracked: Boolean = false, val note: String = "",
+        val tags: List<String> = emptyList(), val label: Boolean = false, val role: FoodRole? = null,
+        val cooked: CookState? = null,
     )
 
     private val productDefs = listOf(
-        P("cottage", "Коттедж 5%", G, 95.0, 11.0, listOf("קוטג'"), category = "Молочное", note = "этикетка"),
-        P("protein_yogurt", "Протеиновый йогурт", G, 56.0, 10.0, category = "Молочное", note = "этикетка: 200 г = 112 ккал, 20 г белка"),
-        P("greek_yogurt", "Греческий йогурт", G, 73.0, 10.0, listOf("יוגורט יווני"), category = "Молочное"),
-        P("white_cheese", "Белый сыр", G, 100.0, 9.0, listOf("גבינה לבנה"), category = "Молочное"),
-        P("egg", "Яйцо", PCS, 155.0, 13.0, listOf("ביצה", "ביצים"), category = "Яйца", gpp = 60.0),
-        P("turkey", "Индейка, нарезка", G, 105.0, 18.0, category = "Мясо"),
-        P("tuna", "Тунец в воде, консервы", PCS, 116.0, 26.0, listOf("טונה"), DRY, "Рыба"),
-        P("chicken_thigh", "Куриное бёдро без кожи, сырое", G, 121.0, 20.0, category = "Мясо"),
-        P("salmon", "Лосось, сырой", G, 208.0, 20.0, listOf("סלמון"), FREEZER, "Рыба"),
-        P("mackerel", "Скумбрия, сырая", G, 205.0, 19.0, listOf("מקרל"), FREEZER, "Рыба"),
-        P("dorado", "Дорада, сырая", G, 100.0, 19.0, listOf("דניס"), FREEZER, "Рыба"),
-        P("seabass", "Сибас, сырой", G, 97.0, 18.0, listOf("לברק"), FREEZER, "Рыба"),
-        P("cod", "Треска или хек, сырые", G, 85.0, 18.0, storage = FREEZER, category = "Рыба"),
-        P("shrimp", "Креветки, сырые очищенные", G, 85.0, 18.0, listOf("שרימפס"), FREEZER, "Рыба"),
-        P("beef", "Говяжья вырезка, сырая", G, 145.0, 21.0, storage = FREEZER, category = "Мясо"),
-        P("pork", "Свиная вырезка, сырая", G, 120.0, 21.0, storage = FREEZER, category = "Мясо"),
-        P("oats", "Овсяные хлопья", G, 370.0, 13.0, listOf("שיבולת שועל"), DRY, "Крупы"),
-        P("potato", "Картофель, сырой", G, 77.0, 2.0, listOf("תפוח אדמה", "תפוחי אדמה"), DRY, "Овощи"),
-        P("batat", "Батат, сырой", G, 86.0, 2.0, listOf("בטטה"), DRY, "Овощи"),
-        P("baked_potato", "Картофель и батат из заготовки, запечённые", G, 95.0, 2.0, category = "Заготовки"),
-        P("chicken_sv", "Курица су-вид из заготовки", G, 175.0, 26.0, category = "Заготовки"),
-        P("rice", "Бурый рис из пакета, готовый", G, 115.0, 3.0, listOf("אורז מלא"), DRY, "Крупы"),
-        P("pasta", "Цельнозерновая паста, сухая", G, 350.0, 13.0, listOf("פסטה מלאה"), DRY, "Крупы"),
-        P("bread", "Цельный хлеб", G, 250.0, 10.0, listOf("לחם מלא"), DRY, "Хлеб", note = "ломтик = 30 г"),
-        P("rice_cakes", "Рисовые хлебцы", PCS, 380.0, 8.0, storage = DRY, category = "Хлеб", gpp = 10.0),
-        P("hummus", "Хумус", G, 230.0, 7.0, listOf("חומוס"), category = "Прочее"),
-        P("tahini", "Тхина", G, 600.0, 17.0, listOf("טחינה"), DRY, "Прочее"),
-        P("olive_oil", "Оливковое масло", ML, 800.0, 0.0, listOf("שמן זית"), DRY, "Масло"),
-        P("almonds", "Миндаль", G, 575.0, 21.0, listOf("שקדים"), DRY, "Орехи"),
-        P("seeds", "Семечки в скорлупе", G, 317.0, 12.0, listOf("גרעינים"), DRY, "Орехи", note = "с учётом скорлупы: 60 г = 190 ккал / 7 г"),
-        P("popcorn", "Попкорн, зёрна", G, 375.0, 12.0, listOf("פופקורן"), DRY, "Прочее"),
-        P("dark_choc", "Тёмный шоколад 70%", G, 575.0, 8.0, listOf("שוקולד מריד", "שוקולד מריר"), DRY, "Прочее"),
-        P("avocado", "Авокадо", PCS, 160.0, 2.0, listOf("אבוקדו"), category = "Овощи", gpp = 200.0),
-        P("cucumber", "Огурец", PCS, 15.0, 0.7, listOf("מלפפון", "מלפפונים"), category = "Овощи", gpp = 120.0),
-        P("tomato", "Помидор", PCS, 18.0, 0.9, listOf("עגבנייה", "עגבניות"), category = "Овощи", gpp = 120.0),
-        P("broccoli", "Брокколи", G, 34.0, 2.8, listOf("ברוקולי"), FREEZER, "Овощи"),
-        P("zucchini", "Кабачок", G, 17.0, 1.2, listOf("קישוא", "קישואים"), category = "Овощи"),
-        P("mushrooms", "Грибы шампиньоны", G, 22.0, 3.0, listOf("פטריות"), category = "Овощи"),
-        P("greens", "Салатная зелень", G, 15.0, 1.4, category = "Овощи"),
-        P("onion", "Лук", PCS, 40.0, 1.1, storage = DRY, category = "Овощи", gpp = 110.0),
-        P("radish", "Редис", G, 16.0, 0.7, category = "Овощи"),
-        P("crushed_tomatoes", "Протёртые помидоры из банки", G, 30.0, 1.5, storage = DRY, category = "Консервы"),
-        P("berries", "Ягоды (смесь, мороженые)", G, 45.0, 1.0, storage = FREEZER, category = "Фрукты"),
-        P("apple", "Яблоко", PCS, 52.0, 0.3, listOf("תפוח", "תפוחים"), category = "Фрукты", gpp = 180.0),
-        P("pear", "Груша", PCS, 57.0, 0.4, category = "Фрукты", gpp = 180.0),
-        P("banana", "Банан", PCS, 89.0, 1.1, listOf("בננה", "בננות"), category = "Фрукты", gpp = 120.0),
+        P("cottage", "Коттедж 5%", G, 95.0, 11.0, listOf("קוטג'"), category = Categories.DAIRY, note = "этикетка", label = true),
+        P("protein_yogurt", "Протеиновый йогурт", G, 56.0, 10.0, category = Categories.DAIRY, note = "этикетка: 200 г = 112 ккал, 20 г белка", label = true),
+        P("greek_yogurt", "Греческий йогурт", G, 73.0, 10.0, listOf("יוגורט יווני"), category = Categories.DAIRY),
+        P("white_cheese", "Белый сыр", G, 100.0, 9.0, listOf("גבינה לבנה"), category = Categories.DAIRY),
+        P("egg", "Яйцо", PCS, 155.0, 13.0, listOf("ביצה", "ביצים"), category = Categories.DAIRY, gpp = 60.0, tags = listOf("egg")),
+        P("turkey", "Индейка, нарезка", G, 105.0, 18.0, category = Categories.POULTRY, cooked = CookState.COOKED),
+        P("tuna", "Тунец в воде, консервы", PCS, 116.0, 26.0, listOf("טונה"), DRY, Categories.CANNED, tags = listOf("fish", "salty")),
+        P("chicken_thigh", "Куриное бёдро без кожи, сырое", G, 121.0, 20.0, category = Categories.POULTRY),
+        P("salmon", "Лосось, сырой", G, 208.0, 20.0, listOf("סלמון"), FREEZER, Categories.FISH, tags = listOf("fish", "fatty_fish")),
+        P("mackerel", "Скумбрия, сырая", G, 205.0, 19.0, listOf("מקרל"), FREEZER, Categories.FISH, tags = listOf("fish", "fatty_fish")),
+        P("dorado", "Дорада, сырая", G, 100.0, 19.0, listOf("דניס"), FREEZER, Categories.FISH, tags = listOf("fish")),
+        P("seabass", "Сибас, сырой", G, 97.0, 18.0, listOf("לברק"), FREEZER, Categories.FISH, tags = listOf("fish")),
+        P("cod", "Треска или хек, сырые", G, 85.0, 18.0, storage = FREEZER, category = Categories.FISH, tags = listOf("fish")),
+        P("shrimp", "Креветки, сырые очищенные", G, 85.0, 18.0, listOf("שרימפס"), FREEZER, Categories.FISH, tags = listOf("seafood")),
+        P("beef", "Говяжья вырезка, сырая", G, 145.0, 21.0, aliases = listOf("פילה בקר"), storage = FREEZER, category = Categories.BEEF, tags = listOf("red_meat")),
+        P("pork", "Свиная вырезка, сырая", G, 120.0, 21.0, storage = FREEZER, category = Categories.PORK_LAMB, tags = listOf("red_meat")),
+        P("oats", "Овсяные хлопья", G, 370.0, 13.0, listOf("שיבולת שועל"), DRY, Categories.GRAINS),
+        P("potato", "Картофель, сырой", G, 77.0, 2.0, listOf("תפוח אדמה", "תפוחי אדמה"), DRY, Categories.VEG),
+        P("batat", "Батат, сырой", G, 86.0, 2.0, listOf("בטטה"), DRY, Categories.VEG),
+        P("baked_potato", "Картофель и батат из заготовки, запечённые", G, 95.0, 2.0, category = Categories.PREPS, role = FoodRole.CARB, cooked = CookState.COOKED),
+        P("chicken_sv", "Курица су-вид из заготовки", G, 175.0, 26.0, category = Categories.PREPS, role = FoodRole.PROTEIN, cooked = CookState.COOKED),
+        P("rice", "Бурый рис из пакета, готовый", G, 115.0, 3.0, listOf("אורז מלא"), DRY, Categories.GRAINS, cooked = CookState.COOKED),
+        P("pasta", "Цельнозерновая паста, сухая", G, 350.0, 13.0, listOf("פסטה מלאה"), DRY, Categories.GRAINS),
+        P("bread", "Цельный хлеб", G, 250.0, 10.0, listOf("לחם מלא"), DRY, Categories.BREAD, note = "ломтик = 30 г"),
+        P("rice_cakes", "Рисовые хлебцы", PCS, 380.0, 8.0, storage = DRY, category = Categories.BREAD, gpp = 10.0),
+        P("hummus", "Хумус", G, 230.0, 7.0, listOf("חומוס"), category = Categories.SAUCES_OTHER, role = FoodRole.SAUCE),
+        P("tahini", "Тхина", G, 600.0, 17.0, listOf("טחינה"), DRY, Categories.SAUCES_OTHER, role = FoodRole.SAUCE),
+        P("olive_oil", "Оливковое масло", ML, 800.0, 0.0, listOf("שמן זית"), DRY, Categories.NUTS_OILS),
+        P("almonds", "Миндаль", G, 575.0, 21.0, listOf("שקדים"), DRY, Categories.NUTS_OILS),
+        P("seeds", "Семечки в скорлупе", G, 317.0, 12.0, listOf("גרעינים"), DRY, Categories.NUTS_OILS, note = "с учётом скорлупы: 60 г = 190 ккал / 7 г", role = FoodRole.SNACK),
+        P("popcorn", "Попкорн, зёрна", G, 375.0, 12.0, listOf("פופקורן"), DRY, Categories.SNACKS, role = FoodRole.SNACK),
+        P("dark_choc", "Тёмный шоколад 70%", G, 575.0, 8.0, listOf("שוקולד מריד", "שוקולד מריר"), DRY, Categories.SWEETS),
+        P("avocado", "Авокадо", PCS, 160.0, 2.0, listOf("אבוקדו"), category = Categories.VEG, gpp = 200.0, role = FoodRole.FAT),
+        P("cucumber", "Огурец", PCS, 15.0, 0.7, listOf("מלפפון", "מלפפונים"), category = Categories.VEG, gpp = 120.0),
+        P("tomato", "Помидор", PCS, 18.0, 0.9, listOf("עגבנייה", "עגבניות"), category = Categories.VEG, gpp = 120.0),
+        P("broccoli", "Брокколи", G, 34.0, 2.8, listOf("ברוקולי"), FREEZER, Categories.VEG),
+        P("zucchini", "Кабачок", G, 17.0, 1.2, listOf("קישוא", "קישואים"), category = Categories.VEG),
+        P("mushrooms", "Грибы шампиньоны", G, 22.0, 3.0, listOf("פטריות"), category = Categories.VEG),
+        P("greens", "Салатная зелень", G, 15.0, 1.4, category = Categories.VEG),
+        P("onion", "Лук", PCS, 40.0, 1.1, storage = DRY, category = Categories.VEG, gpp = 110.0),
+        P("radish", "Редис", G, 16.0, 0.7, category = Categories.VEG),
+        P("crushed_tomatoes", "Протёртые помидоры из банки", G, 30.0, 1.5, storage = DRY, category = Categories.CANNED, role = FoodRole.SAUCE),
+        P("berries", "Ягоды (смесь, мороженые)", G, 45.0, 1.0, storage = FREEZER, category = Categories.FRUIT),
+        P("apple", "Яблоко", PCS, 52.0, 0.3, listOf("תפוח", "תפוחים"), category = Categories.FRUIT, gpp = 180.0),
+        P("pear", "Груша", PCS, 57.0, 0.4, category = Categories.FRUIT, gpp = 180.0),
+        P("banana", "Банан", PCS, 89.0, 1.1, listOf("בננה", "בננות"), category = Categories.FRUIT, gpp = 120.0),
         // Лимоны отслеживаются (раздел 4), вес штуки — ориентир.
-        P("lemon", "Лимон", PCS, 29.0, 1.1, listOf("לימון"), category = "Фрукты", gpp = 100.0),
+        P("lemon", "Лимон", PCS, 29.0, 1.1, listOf("לימון"), category = Categories.FRUIT, gpp = 100.0, role = FoodRole.FRUIT),
         // Приправы и мелочи — не отслеживаются (раздел 9.1).
-        P("paprika", "Паприка", G, 282.0, 14.0, storage = DRY, category = "Приправы", untracked = true),
-        P("garlic_powder", "Чесночный порошок", G, 331.0, 17.0, storage = DRY, category = "Приправы", untracked = true),
-        P("black_pepper", "Чёрный перец", G, 251.0, 10.0, storage = DRY, category = "Приправы", untracked = true),
-        P("garlic", "Чеснок", G, 149.0, 6.4, storage = DRY, category = "Приправы", untracked = true),
-        P("herbs", "Зелень пряная", G, 36.0, 3.0, category = "Приправы", untracked = true),
-        P("cinnamon", "Корица", G, 247.0, 4.0, storage = DRY, category = "Приправы", untracked = true),
-        P("cumin", "Зира", G, 375.0, 18.0, storage = DRY, category = "Приправы", untracked = true),
-        P("oregano", "Орегано", G, 265.0, 9.0, storage = DRY, category = "Приправы", untracked = true),
-        P("chili", "Чили", G, 282.0, 13.0, storage = DRY, category = "Приправы", untracked = true),
+        P("paprika", "Паприка", G, 282.0, 14.0, storage = DRY, category = Categories.SPICES, untracked = true),
+        P("garlic_powder", "Чесночный порошок", G, 331.0, 17.0, storage = DRY, category = Categories.SPICES, untracked = true),
+        P("black_pepper", "Чёрный перец", G, 251.0, 10.0, storage = DRY, category = Categories.SPICES, untracked = true),
+        P("garlic", "Чеснок", G, 149.0, 6.4, aliases = listOf("שום"), storage = DRY, category = Categories.SPICES, untracked = true),
+        P("herbs", "Зелень пряная", G, 36.0, 3.0, category = Categories.SPICES, untracked = true),
+        P("cinnamon", "Корица", G, 247.0, 4.0, storage = DRY, category = Categories.SPICES, untracked = true),
+        P("cumin", "Зира", G, 375.0, 18.0, storage = DRY, category = Categories.SPICES, untracked = true),
+        P("oregano", "Орегано", G, 265.0, 9.0, storage = DRY, category = Categories.SPICES, untracked = true),
+        P("chili", "Чили", G, 282.0, 13.0, storage = DRY, category = Categories.SPICES, untracked = true),
     )
 
     // ---- описание ингредиентов блока ----
@@ -354,14 +361,64 @@ object SeedData {
             listOf(Raw("миндаль 25 г", "almonds", 25.0, G), Raw("яблоко или груша 1 шт", "apple", 1.0, PCS, alts = listOf("pear")))),
     )
 
+    /** Старые названия категорий засева v1 — при обновлении меняются на новые (13.2.5). */
+    val OLD_CATEGORIES = setOf("Молочное", "Яйца", "Мясо", "Рыба", "Крупы", "Овощи", "Заготовки", "Хлеб", "Прочее",
+        "Масло", "Орехи", "Фрукты", "Консервы", "Приправы")
+
+    fun keyFor(name: String): String = "ref:" + FoodSearch.normalize(name)
+
+    private fun cookedOf(name: String): CookState? {
+        val n = name.lowercase()
+        return when {
+            n.contains("сыр") && (n.contains("сырой") || n.contains("сырая") || n.contains("сырое") || n.contains("сырые")) -> CookState.RAW
+            n.contains("сух") -> CookState.RAW
+            n.contains("варён") || n.contains("на гриле") || n.contains("жарен") || n.contains("готов") || n.contains("запечён") -> CookState.COOKED
+            else -> null
+        }
+    }
+
+    /** Разбор таблицы SeedCatalog в продукты (без id). */
+    fun catalogProducts(): List<Product> {
+        var category = ""
+        val out = mutableListOf<Product>()
+        for (raw in SeedCatalog.TABLE.lines()) {
+            val line = raw.trim()
+            if (line.isEmpty()) continue
+            if (line.startsWith("## ")) { category = line.removePrefix("## ").trim(); continue }
+            val f = line.split("|").map { it.trim() }
+            val name = f[0]
+            val unit = when (f.getOrNull(3)) { "мл" -> ML; "шт" -> PCS; else -> G }
+            val tags = f.getOrNull(5).orEmpty().split(",").map { it.trim() }.filter { it.isNotEmpty() }
+            val role = f.getOrNull(7)?.takeIf { it.isNotEmpty() }?.let { r -> FoodRole.entries.first { it.name.equals(r, true) } }
+            out += Product(
+                key = keyFor(name), name = name, category = category, unit = unit,
+                kcalPer100 = f[1].toDouble(), proteinPer100 = f[2].toDouble(),
+                edibleFraction = f.getOrNull(4)?.toDoubleOrNull() ?: 1.0,
+                tags = tags.filter { it != "untracked" }, untracked = "untracked" in tags,
+                aliases = f.getOrNull(6).orEmpty().split(",").map { it.trim() }.filter { it.isNotEmpty() },
+                role = role, cooked = cookedOf(name), source = ProductSource.REFERENCE,
+                storage = when (category) {
+                    Categories.GRAINS, Categories.NUTS_OILS, Categories.CANNED, Categories.SWEETS, Categories.SNACKS, Categories.BREAD -> DRY
+                    else -> FRIDGE
+                },
+            ).withSearchKey()
+        }
+        return out
+    }
+
+    fun Product.withSearchKey(): Product = copy(searchKey = FoodSearch.buildKey(name, aliases, category, tags))
+
     fun build(): SeedBundle {
-        val products = productDefs.mapIndexed { i, p ->
+        val base = productDefs.mapIndexed { i, p ->
             Product(
                 id = i + 1L, key = p.key, name = p.name, category = p.category, unit = p.unit,
                 kcalPer100 = p.kcal, proteinPer100 = p.protein, gramsPerPiece = p.gpp, storage = p.storage,
-                aliases = p.aliases, untracked = p.untracked, note = p.note,
-            )
+                aliases = p.aliases, untracked = p.untracked, note = p.note, tags = p.tags,
+                source = if (p.label) ProductSource.LABEL else ProductSource.REFERENCE,
+                role = p.role, cooked = p.cooked ?: cookedOf(p.name),
+            ).withSearchKey()
         }
+        val products = base + catalogProducts().mapIndexed { i, p -> p.copy(id = base.size + i + 1L) }
         val byKey = products.associateBy { it.key!! }
         fun pid(key: String) = byKey[key]?.id ?: error("seed: unknown product $key")
 

@@ -3,7 +3,11 @@ package com.ration.app.data.db.entity
 import androidx.room.Entity
 import androidx.room.Index
 import androidx.room.PrimaryKey
+import com.ration.app.domain.model.CookMethod
+import com.ration.app.domain.model.CookState
 import com.ration.app.domain.model.DayType
+import com.ration.app.domain.model.FoodRole
+import com.ration.app.domain.model.ProductSource
 import com.ration.app.domain.model.MealKind
 import com.ration.app.domain.model.MealSource
 import com.ration.app.domain.model.MeasureUnit
@@ -21,7 +25,7 @@ import kotlinx.serialization.Serializable
  */
 
 @Serializable
-@Entity(tableName = "product", indices = [Index(value = ["key"], unique = true)])
+@Entity(tableName = "product", indices = [Index(value = ["key"], unique = true), Index("searchKey")])
 data class Product(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     /** Стабильный ключ засева (null у продуктов пользователя). */
@@ -38,6 +42,24 @@ data class Product(
     val aliases: List<String> = emptyList(),
     val untracked: Boolean = false,
     val note: String = "",
+    /** fish, fatty_fish, red_meat, egg, seafood, processed, salty (12.3, 15). */
+    val tags: List<String> = emptyList(),
+    val source: ProductSource = ProductSource.REFERENCE,
+    /** Скрыт из поиска (используется в блоках, запасах или журнале — не удаляется). */
+    val hidden: Boolean = false,
+    val favorite: Boolean = false,
+    /** Доля съедобной части (кость): ккал считаются от веса × доля, склад списывает вес целиком. */
+    val edibleFraction: Double = 1.0,
+    val cooked: CookState? = null,
+    val role: FoodRole? = null,
+    /** Буквы слотов, где продукт уместен: З, С, О, У, Е, П. */
+    val slots: List<String> = emptyList(),
+    val minPortion: Double? = null,
+    val maxPortion: Double? = null,
+    /** Нормализованный ключ поиска: название, алиасы, категория, теги (16.1). */
+    val searchKey: String = "",
+    val useCount: Int = 0,
+    val lastUsedMillis: Long = 0,
 )
 
 @Serializable
@@ -49,6 +71,8 @@ data class StockItem(
     val purchasedDay: Long,
     val expiresDay: Long? = null,
     val note: String = "",
+    /** Количество оценено на глаз (инвентаризация, 17.1). */
+    val approx: Boolean = false,
 )
 
 @Serializable
@@ -89,6 +113,8 @@ data class Block(
     val deductStock: Boolean = true,
     val composition: String = "",
     val active: Boolean = true,
+    /** Свой блок пользователя (M1, M2, …). */
+    val custom: Boolean = false,
 )
 
 @Serializable
@@ -153,6 +179,25 @@ data class Prep(
     val discarded: Boolean = false,
 )
 
+/** Строка фактического состава приёма (12.1–12.3). */
+@Serializable
+data class MealItem(
+    val name: String,
+    val productId: Long? = null,
+    val customFoodId: Long? = null,
+    val prepKey: String? = null,
+    val qty: Double,
+    val unit: MeasureUnit,
+    /** Граммы съедобной части для расчёта ккал. */
+    val grams: Double,
+    val kcal: Double,
+    val protein: Double,
+    val tags: List<String> = emptyList(),
+    /** Сколько списано со склада в единицах продукта (0 — «без списания»). */
+    val deducted: Double = 0.0,
+    val untracked: Boolean = false,
+)
+
 /** Что было списано при записи приёма — для отмены. */
 @Serializable
 data class Deduction(
@@ -181,6 +226,10 @@ data class MealLog(
     val tags: List<String> = emptyList(),
     val eggs: Double = 0.0,
     val deductions: List<Deduction> = emptyList(),
+    /** Исходный блок, если состав изменён или собран на его основе. */
+    val basedOnBlockCode: String? = null,
+    /** Фактический состав (конструктор, изменённый состав, вариант «Что приготовить»). */
+    val items: List<MealItem> = emptyList(),
 )
 
 @Serializable
@@ -268,4 +317,32 @@ data class BpLog(
     val systolic: Int,
     val diastolic: Int,
     val pulse: Int? = null,
+)
+
+/** Ингредиент рецепта: ссылка по роли («protein:fish_white») или жёсткая («product:salmon»). */
+@Serializable
+data class RecipeIngredient(
+    val ref: String,
+    val grams: Double? = null,
+    val pieces: Double? = null,
+    val optional: Boolean = false,
+)
+
+/** Рецепт офлайн-базы (18.8). source: plan / generated — из cookbook.json, user — правки пользователя. */
+@Serializable
+@Entity(tableName = "recipe")
+data class Recipe(
+    @PrimaryKey val id: String,
+    val title: String,
+    val slots: List<String>,
+    val tags: List<String> = emptyList(),
+    val ingredients: List<RecipeIngredient>,
+    val method: CookMethod,
+    val activeMin: Int,
+    val totalMin: Int,
+    val steps: List<String>,
+    val rawToCooked: Double = 1.0,
+    val source: String = "generated",
+    val version: Int = 0,
+    val hidden: Boolean = false,
 )

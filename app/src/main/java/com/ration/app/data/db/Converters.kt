@@ -2,6 +2,8 @@ package com.ration.app.data.db
 
 import androidx.room.TypeConverter
 import com.ration.app.data.db.entity.Deduction
+import com.ration.app.data.db.entity.MealItem
+import com.ration.app.data.db.entity.RecipeIngredient
 import com.ration.app.data.db.entity.PrepInput
 import com.ration.app.data.db.entity.PrepOutput
 import com.ration.app.data.db.entity.RecipeStep
@@ -26,6 +28,12 @@ class Converters {
 
     @TypeConverter fun outputsTo(v: List<PrepOutput>): String = json.encodeToString(ListSerializer(PrepOutput.serializer()), v)
     @TypeConverter fun outputsFrom(v: String): List<PrepOutput> = json.decodeFromString(ListSerializer(PrepOutput.serializer()), v)
+
+    @TypeConverter fun mealItemsTo(v: List<MealItem>): String = json.encodeToString(ListSerializer(MealItem.serializer()), v)
+    @TypeConverter fun mealItemsFrom(v: String): List<MealItem> = json.decodeFromString(ListSerializer(MealItem.serializer()), v)
+
+    @TypeConverter fun recipeIngsTo(v: List<RecipeIngredient>): String = json.encodeToString(ListSerializer(RecipeIngredient.serializer()), v)
+    @TypeConverter fun recipeIngsFrom(v: String): List<RecipeIngredient> = json.decodeFromString(ListSerializer(RecipeIngredient.serializer()), v)
 
     @TypeConverter fun deductionsTo(v: List<Deduction>): String = json.encodeToString(ListSerializer(Deduction.serializer()), v)
     @TypeConverter fun deductionsFrom(v: String): List<Deduction> = json.decodeFromString(ListSerializer(Deduction.serializer()), v)

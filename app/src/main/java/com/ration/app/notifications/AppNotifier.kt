@@ -120,10 +120,11 @@ class AppNotifier @Inject constructor(@ApplicationContext private val context: C
         post(id, b)
     }
 
-    fun forecast(day: Long, text: String) {
-        val b = base(Channels.PLAN, "План на завтра", text, "tomorrow", Ids.FORECAST)
+    fun forecast(day: Long, text: String, proteinShort: Boolean = false) {
+        val b = base(Channels.PLAN, "План на завтра", text + if (proteinShort) " Сегодня не хватает белка." else "", "tomorrow", Ids.FORECAST)
             .addAction(0, "Открыть", openIntent("tomorrow", Ids.FORECAST * 10 + 1))
             .addAction(0, "Подтвердить", actionIntent(NotificationActionReceiver.ACTION_CONFIRM, Ids.FORECAST * 10 + 2, day = day))
+        if (proteinShort) b.addAction(0, "Варианты из холодильника", openIntent("cook", Ids.FORECAST * 10 + 3))
         post(Ids.FORECAST, b)
     }
 
