@@ -12,6 +12,7 @@ import com.ration.app.data.db.entity.BlockIngredient
 import com.ration.app.data.db.entity.BpLog
 import com.ration.app.data.db.entity.CustomFood
 import com.ration.app.data.db.entity.DayPlan
+import com.ration.app.data.db.entity.Dish
 import com.ration.app.data.db.entity.MealLog
 import com.ration.app.data.db.entity.PlannedSlot
 import com.ration.app.data.db.entity.Prep
@@ -21,9 +22,11 @@ import com.ration.app.data.db.entity.Purchase
 import com.ration.app.data.db.entity.PurchaseLine
 import com.ration.app.data.db.entity.QuickLog
 import com.ration.app.data.db.entity.Recipe
+import com.ration.app.data.db.entity.SlotState
 import com.ration.app.data.db.entity.StockItem
 import com.ration.app.data.db.entity.Substitution
 import com.ration.app.data.db.entity.WeightLog
+import com.ration.app.domain.model.SlotType
 import kotlinx.coroutines.flow.Flow
 
 data class ProductTotal(val productId: Long, val total: Double)
@@ -114,7 +117,9 @@ interface MealDao {
     @Query("SELECT * FROM meal_log ORDER BY atMillis DESC LIMIT :n") suspend fun recent(n: Int): List<MealLog>
     @Query("SELECT COUNT(*) FROM meal_log WHERE items LIKE :pattern") suspend fun countMentioning(pattern: String): Int
     @Query("SELECT * FROM meal_log WHERE id = :id") suspend fun get(id: Long): MealLog?
+    @Query("SELECT * FROM meal_log WHERE day = :day AND slot = :slot ORDER BY atMillis") suspend fun forSlot(day: Long, slot: SlotType): List<MealLog>
     @Insert suspend fun insert(l: MealLog): Long
+    @Update suspend fun update(l: MealLog)
     @Insert suspend fun insertAll(list: List<MealLog>)
     @Delete suspend fun delete(l: MealLog)
 
@@ -149,6 +154,26 @@ interface PlanDao {
     @Update suspend fun updateSlot(s: PlannedSlot)
     @Update suspend fun updateSlots(list: List<PlannedSlot>)
     @Query("DELETE FROM planned_slot WHERE day = :day") suspend fun deleteSlots(day: Long)
+}
+
+/** Состояния приёмов (19.5). */
+@Dao
+interface SlotStateDao {
+    @Query("SELECT * FROM slot_state WHERE day = :day") fun observeDay(day: Long): Flow<List<SlotState>>
+    @Query("SELECT * FROM slot_state WHERE day = :day") suspend fun forDay(day: Long): List<SlotState>
+    @Query("SELECT * FROM slot_state") suspend fun getAll(): List<SlotState>
+    @Upsert suspend fun upsertAll(list: List<SlotState>)
+    @Query("DELETE FROM slot_state WHERE day = :day AND slot IN (:slots)") suspend fun delete(day: Long, slots: List<String>)
+    @Insert(onConflict = OnConflictStrategy.REPLACE) suspend fun insertAll(list: List<SlotState>)
+}
+
+/** Отдельные блюда (19.4). IGNORE по ключу (legacyBlockId, componentIndex) — разбиение идемпотентно. */
+@Dao
+interface DishDao {
+    @Query("SELECT * FROM dish ORDER BY legacyBlockId, componentIndex") fun observeAll(): Flow<List<Dish>>
+    @Query("SELECT * FROM dish ORDER BY legacyBlockId, componentIndex") suspend fun getAll(): List<Dish>
+    @Query("SELECT * FROM dish WHERE id = :id") suspend fun get(id: Long): Dish?
+    @Insert(onConflict = OnConflictStrategy.IGNORE) suspend fun insertIgnore(list: List<Dish>): List<Long>
 }
 
 @Dao
@@ -204,9 +229,12 @@ abstract class MaintenanceDao {
     @Query("DELETE FROM weight_log") abstract suspend fun weights()
     @Query("DELETE FROM bp_log") abstract suspend fun bp()
     @Query("DELETE FROM recipe") abstract suspend fun recipes()
+    @Query("DELETE FROM slot_state") abstract suspend fun slotStates()
+    @Query("DELETE FROM dish") abstract suspend fun dishes()
 
     open suspend fun deleteEverything() {
         products(); stock(); purchases(); purchaseLines(); blocks(); blockIngredients(); prepTemplates(); preps()
         mealLogs(); customFoods(); substitutions(); dayPlans(); plannedSlots(); quickLogs(); weights(); bp(); recipes()
+        slotStates(); dishes()
     }
 }

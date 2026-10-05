@@ -9,6 +9,7 @@ import com.ration.app.domain.model.DayType
 import com.ration.app.domain.model.FoodRole
 import com.ration.app.domain.model.ProductSource
 import com.ration.app.domain.model.MealKind
+import com.ration.app.domain.model.MealSlotStatus
 import com.ration.app.domain.model.MealSource
 import com.ration.app.domain.model.MeasureUnit
 import com.ration.app.domain.model.MeatChoice
@@ -115,6 +116,8 @@ data class Block(
     val active: Boolean = true,
     /** Свой блок пользователя (M1, M2, …). */
     val custom: Boolean = false,
+    /** Исходные блоки З1–Е6 скрыты из списков (19.4): вместо них отдельные блюда [Dish]. */
+    val hidden: Boolean = false,
 )
 
 @Serializable
@@ -196,6 +199,8 @@ data class MealItem(
     /** Сколько списано со склада в единицах продукта (0 — «без списания»). */
     val deducted: Double = 0.0,
     val untracked: Boolean = false,
+    /** Строка из отдельного блюда (19.4). Без продукта и заготовки — фиксированные ккал/белок, без списания. */
+    val dishId: Long? = null,
 )
 
 /** Что было списано при записи приёма — для отмены. */
@@ -230,6 +235,46 @@ data class MealLog(
     val basedOnBlockCode: String? = null,
     /** Фактический состав (конструктор, изменённый состав, вариант «Что приготовить»). */
     val items: List<MealItem> = emptyList(),
+    /** Слоты, автоматически пропущенные этой записью (19.3): отмена записи возвращает их в «не отмечен». */
+    val autoSkipped: List<String> = emptyList(),
+)
+
+/**
+ * Состояние приёма дня (19.5). Нет строки — EMPTY. LOGGED ставится при первой записи в слот,
+ * SKIPPED — вручную или автопропуском ([autoSkipped]).
+ */
+@Serializable
+@Entity(tableName = "slot_state", primaryKeys = ["day", "slot"])
+data class SlotState(
+    val day: Long,
+    val slot: SlotType,
+    val status: MealSlotStatus,
+    val autoSkipped: Boolean = false,
+    val updatedAt: Long = 0,
+)
+
+/**
+ * Отдельное блюдо (19.4) — компонент исходного блока со своим весом, ккал и белком.
+ * Ключ (legacyBlockId, componentIndex) делает разбиение идемпотентным.
+ * Источник: продукт ([productId], вес сырой — для списания), заготовка ([prepKey]) или фиксированные значения
+ * (блюда «на улице» и батончики, без списания).
+ */
+@Serializable
+@Entity(tableName = "dish", indices = [Index(value = ["legacyBlockId", "componentIndex"], unique = true)])
+data class Dish(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val legacyBlockId: Long,
+    val componentIndex: Int,
+    val name: String,
+    val productId: Long? = null,
+    val prepKey: String? = null,
+    val qty: Double,
+    val unit: MeasureUnit,
+    val kcal: Double,
+    val protein: Double,
+    val tags: List<String> = emptyList(),
+    val blockCode: String = "",
+    val hidden: Boolean = false,
 )
 
 @Serializable

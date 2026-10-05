@@ -4,7 +4,6 @@ import com.ration.app.data.db.entity.PlannedSlot
 import com.ration.app.domain.TimeUtil
 import com.ration.app.domain.model.AppSettings
 import com.ration.app.domain.model.SlotStatus
-import com.ration.app.domain.model.SlotType
 import java.time.LocalDateTime
 import java.time.ZoneId
 
@@ -34,7 +33,8 @@ object ReminderRules {
      */
     fun nextMarkReminder(slot: PlannedSlot, now: LocalDateTime, s: AppSettings, zone: ZoneId): LocalDateTime? {
         if (slot.status != SlotStatus.PLANNED) return null
-        if (slot.blockId == null && slot.slot == SlotType.EVENING) return null
+        // перекусы С, П, Е напоминают, только если это включено в настройках (optional = без напоминания)
+        if (slot.optional) return null
         val base = TimeUtil.slotDateTime(slot.day, slot.minuteOfDay)
         val snoozeAt = slot.snoozeUntilMillis
         val due: LocalDateTime = when {

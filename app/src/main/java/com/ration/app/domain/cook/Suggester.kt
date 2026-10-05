@@ -200,7 +200,7 @@ class Suggester(
     private fun level1(req: SuggestRequest): List<Suggestion> {
         val out = mutableListOf<Suggestion>()
         val cands = blocks.filter { b ->
-            b.active && b.deductStock && b.kind in req.slot.mealKinds && Tags.BAR !in b.tags && (!req.onlyOwn || b.custom)
+            b.active && !b.hidden && b.deductStock && b.kind in req.slot.mealKinds && Tags.BAR !in b.tags && (!req.onlyOwn || b.custom)
         }
         for (b in cands) {
             val ings = ingredients[b.id].orEmpty().filter { !it.toTaste }

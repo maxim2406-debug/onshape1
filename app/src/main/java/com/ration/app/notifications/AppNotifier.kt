@@ -111,17 +111,17 @@ class AppNotifier @Inject constructor(@ApplicationContext private val context: C
     fun markReminder(slotId: Long, question: String, snoozeAvailable: Boolean) {
         val id = slotNotificationId(slotId)
         val rc = id * 10
-        val b = base(Channels.MEALS, question, "Отметьте, что и сколько съели.", "log/$slotId", rc)
-            .setContentIntent(openIntent("log/$slotId", rc, slotId))
-            .addAction(0, "Записать", openIntent("log/$slotId", rc + 1, slotId))
-            .addAction(0, "Съел по плану", actionIntent(NotificationActionReceiver.ACTION_EAT, rc + 2, slotId))
+        // «Съел по плану» убрано (19.2): готовых блюд по плану нет, приём собирается из продуктов
+        val b = base(Channels.MEALS, question, "Отметьте, что и сколько съели.", "slot", rc)
+            .setContentIntent(openIntent("slot", rc, slotId))
+            .addAction(0, "Записать", openIntent("slot", rc + 1, slotId))
             .addAction(0, "Пропустил", actionIntent(NotificationActionReceiver.ACTION_SKIP, rc + 3, slotId))
         if (snoozeAvailable) b.addAction(0, "Через 30 минут", actionIntent(NotificationActionReceiver.ACTION_SNOOZE, rc + 4, slotId))
         post(id, b)
     }
 
     fun forecast(day: Long, text: String, proteinShort: Boolean = false) {
-        val b = base(Channels.PLAN, "План на завтра", text + if (proteinShort) " Сегодня не хватает белка." else "", "tomorrow", Ids.FORECAST)
+        val b = base(Channels.PLAN, "Завтра", text + if (proteinShort) " Сегодня не хватает белка." else "", "tomorrow", Ids.FORECAST)
             .addAction(0, "Открыть", openIntent("tomorrow", Ids.FORECAST * 10 + 1))
             .addAction(0, "Подтвердить", actionIntent(NotificationActionReceiver.ACTION_CONFIRM, Ids.FORECAST * 10 + 2, day = day))
         if (proteinShort) b.addAction(0, "Варианты из холодильника", openIntent("cook", Ids.FORECAST * 10 + 3))

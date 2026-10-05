@@ -26,6 +26,7 @@ class BackupRepository @Inject constructor(
     private val keyStore: SecureKeyStore,
     private val scheduler: ReminderScheduler,
     private val catalog: CatalogRepository,
+    private val plans: PlanRepository,
     private val clock: Clock,
 ) {
     suspend fun snapshot(): BackupData = BackupData(
@@ -48,6 +49,8 @@ class BackupRepository @Inject constructor(
         weights = db.health().weights(),
         bp = db.health().bp(),
         recipes = db.recipes().getAll().filter { it.source == "user" },
+        slotStates = db.slotStates().getAll(),
+        dishes = db.dishes().getAll(),
     )
 
     /** Экспорт в файл, выбранный пользователем (SAF). Ключ API не экспортируется. */
@@ -70,14 +73,8 @@ class BackupRepository @Inject constructor(
         val d = BackupCodec.decode(text, password)
         db.withTransaction {
             db.maintenance().deleteEverything()
-            // копия схемы 1: у продуктов нет источника — свои (без ключа засева) помечаются USER, как в MIGRATION_1_2
-            db.products().insertAll(if (d.schemaVersion >= 2) d.products else d.products.map {
-                when {
-                    it.key == null -> it.copy(source = com.ration.app.domain.model.ProductSource.USER)
-                    it.key == "cottage" || it.key == "protein_yogurt" -> it.copy(source = com.ration.app.domain.model.ProductSource.LABEL)
-                    else -> it
-                }
-            })
+            // копии прежних схем уже приведены к текущей (BackupUpgrade)
+            db.products().insertAll(d.products)
             db.stock().insertAll(d.stock)
             db.purchases().insertAll(d.purchases)
             db.purchases().insertLines(d.purchaseLines)
@@ -94,12 +91,15 @@ class BackupRepository @Inject constructor(
             db.health().insertWeights(d.weights)
             db.health().insertBps(d.bp)
             db.recipes().upsertAll(d.recipes.map { it.copy(source = "user") })
+            db.slotStates().insertAll(d.slotStates)
+            db.dishes().insertIgnore(d.dishes)
         }
         catalog.ensureSeeded()
         catalog.forceCookbookSync()
         // Режим API не переносится: ключ не входит в копию.
         settings.replace(d.settings.copy(claudeApiEnabled = d.settings.claudeApiEnabled && keyStore.hasApiKey()))
-        scheduler.rescheduleAll()
+        // расписание шести слотов (19.8): из копии или перенос из расписаний типов дня
+        plans.applySchedule()
     }
 
     /** «Удалить все данные»: база, настройки, ключ, кэш отчётов; затем чистый засев. */

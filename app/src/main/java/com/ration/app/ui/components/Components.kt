@@ -105,6 +105,41 @@ fun RangeProgress(label: String, value: Double, min: Int, max: Int, unit: String
     }
 }
 
+/**
+ * Цель дня (19.8): цель, текущее значение, остаток и полоса прогресса. [range] — допустимый диапазон, если есть.
+ */
+@Composable
+fun GoalProgress(label: String, value: Double, goal: Int, unit: String, range: IntRange? = null) {
+    val over = range != null && value > range.last
+    val reached = value >= (range?.first ?: goal)
+    val color = when {
+        over -> MaterialTheme.colorScheme.error
+        reached -> Color(0xFF2E7D32)
+        else -> MaterialTheme.colorScheme.primary
+    }
+    Column(Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+            Text("$label: ${Math.round(value)} из $goal $unit", style = MaterialTheme.typography.bodyMedium)
+            val left = goal - value
+            Text(
+                when {
+                    over -> "перебор ${Math.round(value - range!!.last)} $unit"
+                    left > 0 -> "осталось ${Math.round(left)} $unit"
+                    else -> "цель достигнута"
+                } + (range?.let { " · норма ${it.first}–${it.last}" } ?: ""),
+                style = MaterialTheme.typography.bodySmall,
+                color = if (over) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        Spacer(Modifier.height(4.dp))
+        LinearProgressIndicator(
+            progress = { (value / maxOf(goal, 1)).toFloat().coerceIn(0f, 1f) },
+            modifier = Modifier.fillMaxWidth().height(8.dp),
+            color = color,
+        )
+    }
+}
+
 @Composable
 fun InfoCard(title: String? = null, container: Color = MaterialTheme.colorScheme.surfaceVariant, content: @Composable () -> Unit) {
     Card(Modifier.fillMaxWidth().padding(vertical = 4.dp), colors = CardDefaults.cardColors(containerColor = container)) {

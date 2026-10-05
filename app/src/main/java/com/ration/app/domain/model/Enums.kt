@@ -30,31 +30,58 @@ enum class MealKind(val label: String, val letter: String) {
     EVENING("Вечер", "Е"),
 }
 
-/** Слот дня. */
-@Serializable
+/**
+ * Шесть приёмов пищи дня (19.1) в фиксированном порядке: З, С, О, П, У, Е.
+ * До версии 3 в базе были SNACK_1, SNACK_2 и ROAD_BAR (все между обедом и ужином) — они стали П;
+ * слот С (перекус между завтраком и обедом) новый. Переименование — в MIGRATION_2_3 и [fromStored].
+ */
+@Serializable(with = SlotTypeSerializer::class)
 enum class SlotType(val label: String, val short: String) {
     BREAKFAST("Завтрак", "З"),
+    SNACK_AM("Перекус", "С"),
     LUNCH("Обед", "О"),
-    SNACK_1("Перекус 1", "П"),
-    SNACK_2("Перекус 2", "П"),
-    ROAD_BAR("Батончик в дороге", "П"),
+    SNACK_PM("Перекус", "П"),
     DINNER("Ужин", "У"),
-    EVENING("Вечер", "Е");
+    EVENING("Перекус", "Е");
+
+    /** «З · Завтрак», «С · Перекус» — три перекуса различаются буквой. */
+    val title: String get() = "$short · $label"
 
     val kinds: Set<MealKind>
         get() = when (this) {
             BREAKFAST -> setOf(MealKind.BREAKFAST)
             LUNCH -> setOf(MealKind.LUNCH_CARRY, MealKind.LUNCH_STREET)
-            SNACK_1, SNACK_2, ROAD_BAR -> setOf(MealKind.SNACK)
+            SNACK_AM, SNACK_PM -> setOf(MealKind.SNACK)
             DINNER -> setOf(MealKind.DINNER)
-            EVENING -> setOf(MealKind.EVENING)
+            EVENING -> setOf(MealKind.EVENING, MealKind.SNACK)
         }
 
     /** Основной приём: белок не меньше 30 г (правило 6.3.1). */
     val isMain: Boolean get() = this == BREAKFAST || this == LUNCH || this == DINNER
-    val isSnack: Boolean get() = this == SNACK_1 || this == SNACK_2 || this == ROAD_BAR
+    val isSnack: Boolean get() = !isMain
+
+    companion object {
+        /** Имена слотов до схемы 3 → новые (резервные копии, настройки). */
+        val LEGACY = mapOf("SNACK_1" to SNACK_PM, "SNACK_2" to SNACK_PM, "ROAD_BAR" to SNACK_PM)
+        fun fromStored(name: String): SlotType? = entries.firstOrNull { it.name == name } ?: LEGACY[name]
+    }
 }
 
+/** Принимает и прежние имена слотов (SNACK_1, SNACK_2, ROAD_BAR) — копии и настройки версии 2 читаются. */
+object SlotTypeSerializer : kotlinx.serialization.KSerializer<SlotType> {
+    override val descriptor = kotlinx.serialization.descriptors.PrimitiveSerialDescriptor("SlotType", kotlinx.serialization.descriptors.PrimitiveKind.STRING)
+    override fun serialize(encoder: kotlinx.serialization.encoding.Encoder, value: SlotType) = encoder.encodeString(value.name)
+    override fun deserialize(decoder: kotlinx.serialization.encoding.Decoder): SlotType {
+        val n = decoder.decodeString()
+        return SlotType.fromStored(n) ?: throw kotlinx.serialization.SerializationException("неизвестный слот $n")
+    }
+}
+
+/** Состояние приёма на вкладке «Сегодня» (19.2): не отмечен, пропущен, записан. */
+@Serializable
+enum class MealSlotStatus(val label: String) { EMPTY("не отмечен"), SKIPPED("пропущен"), LOGGED("записан") }
+
+/** Тип дня — только для старых записей day_plan (19.8: в интерфейсе типов дня нет). */
 @Serializable
 enum class DayType(val label: String) { A("А"), B("Б") }
 
@@ -146,7 +173,7 @@ enum class CookSlot(val letter: String, val label: String) {
             CARRY, LUNCH -> SlotType.LUNCH
             DINNER -> SlotType.DINNER
             EVENING -> SlotType.EVENING
-            SNACK -> SlotType.SNACK_1
+            SNACK -> SlotType.SNACK_PM
         }
 
     companion object {
@@ -155,7 +182,7 @@ enum class CookSlot(val letter: String, val label: String) {
             SlotType.LUNCH -> LUNCH
             SlotType.DINNER -> DINNER
             SlotType.EVENING -> EVENING
-            SlotType.SNACK_1, SlotType.SNACK_2, SlotType.ROAD_BAR -> SNACK
+            SlotType.SNACK_AM, SlotType.SNACK_PM -> SNACK
         }
         fun ofLetter(l: String): CookSlot? = entries.firstOrNull { it.letter == l }
     }

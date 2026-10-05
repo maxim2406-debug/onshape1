@@ -5,6 +5,8 @@ import com.ration.app.data.db.entity.BlockIngredient
 import com.ration.app.data.db.entity.BpLog
 import com.ration.app.data.db.entity.CustomFood
 import com.ration.app.data.db.entity.DayPlan
+import com.ration.app.data.db.entity.Dish
+import com.ration.app.data.db.entity.SlotState
 import com.ration.app.data.db.entity.MealLog
 import com.ration.app.data.db.entity.PlannedSlot
 import com.ration.app.data.db.entity.Prep
@@ -52,7 +54,40 @@ data class BackupData(
     val bp: List<BpLog> = emptyList(),
     /** Пользовательские рецепты (source = user); встроенная база восстанавливается из приложения. */
     val recipes: List<Recipe> = emptyList(),
+    /** Статусы приёмов (схема 3). */
+    val slotStates: List<SlotState> = emptyList(),
+    /** Отдельные блюда (схема 3): id сохраняются, на них ссылаются строки состава в журнале. */
+    val dishes: List<Dish> = emptyList(),
 )
+
+/**
+ * Приведение копии прежней схемы к текущей (19.6): имена слотов SNACK_1/SNACK_2/ROAD_BAR читает [com.ration.app.domain.model.SlotTypeSerializer];
+ * здесь — то же, что делает MIGRATION_2_3 с базой.
+ */
+object BackupUpgrade {
+    fun toCurrent(d: BackupData): BackupData {
+        // после слияния П1/П2/дороги в П в расписании дня может оказаться две строки одного слота — остаётся первая
+        val slots = d.plannedSlots.distinctBy { it.day to it.slot }
+        if (d.schemaVersion >= 3) return d.copy(plannedSlots = slots)
+        val states = d.mealLogs.filter { it.slot != null }.groupBy { it.day to it.slot!! }
+            .map { (k, logs) -> SlotState(k.first, k.second, com.ration.app.domain.model.MealSlotStatus.LOGGED, false, logs.maxOf { it.atMillis }) }
+        // копия схемы 1: у продуктов нет источника — свои (без ключа засева) USER, как в MIGRATION_1_2
+        val products = if (d.schemaVersion >= 2) d.products else d.products.map {
+            when {
+                it.key == null -> it.copy(source = com.ration.app.domain.model.ProductSource.USER)
+                it.key == "cottage" || it.key == "protein_yogurt" -> it.copy(source = com.ration.app.domain.model.ProductSource.LABEL)
+                else -> it
+            }
+        }
+        return d.copy(
+            products = products,
+            blocks = d.blocks.map { it.copy(hidden = !it.custom) },
+            plannedSlots = slots,
+            slotStates = states,
+            schemaVersion = BackupCodec.SCHEMA_VERSION,
+        )
+    }
+}
 
 @Serializable
 data class BackupEnvelope(
@@ -71,7 +106,7 @@ class BackupException(message: String) : Exception(message)
 
 object BackupCodec {
     const val FORMAT = "ration-backup"
-    const val SCHEMA_VERSION = 2
+    const val SCHEMA_VERSION = 3
     const val MAX_BYTES = 20_000_000
     private const val PBKDF2_ITERATIONS = 210_000
     private const val KEY_BITS = 256
@@ -129,7 +164,7 @@ object BackupCodec {
             throw BackupException("Файл не соответствует схеме резервной копии")
         }
         validate(data)
-        return data
+        return BackupUpgrade.toCurrent(data).also { validate(it) }
     }
 
     private fun parseEnvelope(text: String): BackupEnvelope {
@@ -153,7 +188,7 @@ object BackupCodec {
         check(s.kcalMin in 500..6000 && s.kcalMax in 500..6000 && s.kcalMin <= s.kcalMax, "цели ккал")
         check(s.proteinMin in 0..400 && s.proteinMax in 0..400 && s.proteinMin <= s.proteinMax, "цели белка")
         val minutes = listOf(s.forecastTime, s.shoppingCheckTime, s.quietStart, s.quietEnd, s.coffeeLimit, s.weighTime, s.prepTime) +
-            s.slotTimesA.values + s.slotTimesB.values
+            s.slotTimesA.values + s.slotTimesB.values + s.slotTimes.orEmpty().values
         check(minutes.all { it in 0 until 24 * 60 }, "время в настройках")
         check(s.buyThresholdPct in 1..100 && s.urgentThresholdPct in 0..s.buyThresholdPct, "пороги закупки")
 
@@ -195,6 +230,15 @@ object BackupCodec {
         d.products.forEach { check(it.edibleFraction in 0.05..1.0 && it.tags.size <= 20, "поля продукта «${it.name}»") }
         d.mealLogs.forEach { l -> check(l.items.size <= 50 && l.items.all { it.qty in 0.0..100_000.0 && it.kcal in 0.0..20_000.0 }, "состав приёма ${l.id}") }
         d.recipes.forEach { r -> check(r.title.isNotBlank() && r.steps.size <= 20 && r.ingredients.size <= 30, "рецепт ${r.id}") }
+        check(d.slotStates.map { it.day to it.slot }.toSet().size == d.slotStates.size, "повтор статуса слота")
+        val dishIds = d.dishes.map { it.id }.toSet()
+        check(dishIds.size == d.dishes.size && d.dishes.map { it.legacyBlockId to it.componentIndex }.toSet().size == d.dishes.size, "повтор блюда")
+        d.dishes.forEach {
+            check(it.name.isNotBlank() && it.name.length <= 200 && it.qty in 0.0..100_000.0, "блюдо ${it.id}")
+            check(finite(it.kcal) && it.kcal in 0.0..20_000.0 && it.protein in 0.0..2_000.0, "блюдо ${it.id}")
+            check(it.productId == null || it.productId in productIds, "продукт блюда ${it.id}")
+        }
+        d.mealLogs.forEach { l -> check(l.autoSkipped.size <= 6, "автопропуск приёма ${l.id}") }
         d.bp.forEach { check(it.systolic in 40..300 && it.diastolic in 20..200 && (it.pulse == null || it.pulse in 20..250), "давление ${it.id}") }
     }
 

@@ -106,7 +106,6 @@ fun PantryScreen(nav: NavController, vm: PantryViewModel = hiltViewModel()) {
                     androidx.compose.material3.AssistChip(onClick = { nav.navigate("inventory") }, label = { Text("Инвентаризация") })
                     androidx.compose.material3.AssistChip(onClick = { adding = true }, label = { Text("Добавить в библиотеку") })
                     androidx.compose.material3.AssistChip(onClick = { nav.navigate("library") }, label = { Text("Библиотека") })
-                    androidx.compose.material3.AssistChip(onClick = { nav.navigate("cook") }, label = { Text("Что приготовить") })
                 }
             }
             item { SectionTitle("Заготовки") }

@@ -1,6 +1,7 @@
 package com.ration.app.domain.library
 
 import com.ration.app.data.db.entity.CustomFood
+import com.ration.app.data.db.entity.Dish
 import com.ration.app.data.db.entity.Product
 import com.ration.app.domain.model.MeasureUnit
 import com.ration.app.domain.model.ProductSource
@@ -26,6 +27,8 @@ data class FoodEntry(
     val useCount: Int,
     val inStock: Boolean,
     val searchKey: String,
+    /** Отдельное блюдо (19.4): порция со своим весом, ккал и белком. */
+    val dish: Dish? = null,
 ) {
     val proteinPer100Kcal: Double?
         get() = if (kcal100 != null && protein100 != null && kcal100 > 0) protein100 / kcal100 * 100 else null
@@ -36,6 +39,18 @@ data class FoodEntry(
             p.source, p.favorite, p.hidden, p.untracked, p.useCount, inStock,
             p.searchKey.ifEmpty { FoodSearch.buildKey(p.name, p.aliases, p.category, p.tags) },
         )
+
+        /** Блюдо: ккал и белок на 100 г — только если порция в граммах; в строке показывается порция. */
+        fun of(d: Dish, inStock: Boolean): FoodEntry {
+            val per100 = d.unit != MeasureUnit.PCS && d.qty > 0
+            return FoodEntry(
+                "d:${d.id}", null, null, d.name, DISHES, d.unit, if (per100) d.kcal / d.qty * 100 else null,
+                if (per100) d.protein / d.qty * 100 else null, emptyList(), d.tags, ProductSource.REFERENCE, false, d.hidden, false, 0, inStock,
+                FoodSearch.buildKey(d.name, listOf(d.blockCode), DISHES, d.tags), dish = d,
+            )
+        }
+
+        const val DISHES = "блюда"
 
         fun of(f: CustomFood): FoodEntry {
             val tags = buildList { if (f.isBar) add("bar") }

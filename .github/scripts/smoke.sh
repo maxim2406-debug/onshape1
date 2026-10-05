@@ -46,22 +46,51 @@ for route in today tomorrow shopping preps prep_checklist week health import lib
   if crashed; then echo "Падение на экране $route"; grep -A30 "FATAL EXCEPTION" smoke-logcat.txt; exit 1; fi
 done
 
-# Сценарий конструктора (12): Сегодня → Собрать из продуктов → + Продукт → выбор → Записать
+# Сценарий раздела 19: шесть приёмов, две кнопки, автопропуск, «Изменить», пропуск
 UI="python3 .github/scripts/ui.py"
 step() {
   sleep 3
   if crashed; then echo "Падение: $1"; grep -A40 "FATAL EXCEPTION" smoke-logcat.txt; exit 1; fi
 }
+record_first() {   # в конструкторе: первая позиция списка → Записать → закрыть диалоги
+  $UI tap "+ Продукт или блюдо" || exit 1; step "открытие списка продуктов и блюд"
+  $UI tap "ккал ·" --contains || exit 1; step "выбор позиции"
+  $UI has "Итог:" --contains || exit 1
+  $UI tap "Записать" || exit 1; step "запись приёма"
+  $UI tap "Не нужно" || true; step "диалог своего блока"
+  $UI tap "OK" || true; step "возврат на «Сегодня»"
+}
 adb shell am start -W -n "$ACT" --es route today > /dev/null; sleep 4
-$UI tap "Собрать из продуктов" || exit 1; step "открытие конструктора"
-$UI tap "+ Продукт" || exit 1; step "открытие выбора продукта"
-$UI tap "ккал ·" --contains || exit 1; step "выбор продукта в конструкторе"
-$UI has "Итог:" --contains || exit 1
-$UI tap "+ Продукт" || exit 1; step "повторное открытие выбора"
-$UI tap "ккал ·" --contains --index 2 || exit 1; step "выбор второго продукта"
-$UI tap "Записать" || exit 1; step "запись приёма из продуктов"
-$UI tap "Не нужно" || true; step "закрытие диалога своего блока"
-$UI tap "OK" || true; step "возврат из конструктора"
+$UI top
+for t in "З · Завтрак" "С · Перекус" "О · Обед" "П · Перекус" "У · Ужин" "Е · Перекус"; do
+  $UI has "$t" || { echo "нет карточки $t"; exit 1; }
+done
+$UI hasnot "Тип дня" || exit 1
+$UI hasnot "Съел по плану" || exit 1
+$UI hasnot "В пути" || exit 1
+$UI hasnot "Что приготовить" || exit 1
+$UI has "Вода +250 мл" || exit 1
+$UI has "Свой продукт" || exit 1
+
+$UI tapnear "З · Завтрак" "Собрать из продуктов" || exit 1; step "конструктор для завтрака"
+record_first
+$UI tapnear "О · Обед" "Собрать из продуктов" || exit 1; step "конструктор для обеда"
+record_first
+# С пустой между записанными З и О → пропущен автоматически
+$UI top
+$UI has "пропущен (авто)" || { echo "нет автопропуска"; exit 1; }
+$UI tapnear "О · Обед" "Изменить" || exit 1; step "изменить обед"
+$UI has "Изменить:" --contains || exit 1
+$UI tap "Записать" || exit 1; step "сохранение изменённого обеда"
+$UI tap "OK" || true; step "возврат после изменения"
+$UI tapnear "П · Перекус" "Пропустить" || exit 1; step "пропуск перекуса"
+$UI has "Отменить пропуск" || exit 1
+$UI tapnear "П · Перекус" "Отменить пропуск" || exit 1; step "отмена пропуска"
+# меню конструктора: «Что приготовить» открывается только отсюда
+$UI tapnear "У · Ужин" "Собрать из продуктов" || exit 1; step "конструктор для ужина"
+$UI tap "Меню" || exit 1; step "меню конструктора"
+$UI tap "Что приготовить" || exit 1; step "Что приготовить из конструктора"
+sleep 3; step "подбор вариантов"
 
 # Нижняя навигация: вкладки открываются через маршруты today/… выше; проверяем ещё возврат и повторный запуск
 adb shell input keyevent KEYCODE_BACK; sleep 2
@@ -70,4 +99,14 @@ adb shell am start -W -n "$ACT" > /dev/null; sleep 8
 if crashed; then echo "Падение при повторном запуске"; grep -A30 "FATAL EXCEPTION" smoke-logcat.txt; exit 1; fi
 
 adb logcat -d > smoke-logcat.txt
+
+# Инструментальный тест миграции БД v2 → v3 (MigrationTestHelper, 19.7)
+TEST_DIR="${3:-}"
+if [ -n "$TEST_DIR" ]; then
+  TAPK=$(find "$TEST_DIR" -name "*.apk" | head -1)
+  echo "Тестовый APK: $TAPK"
+  adb install -r -t "$TAPK" || exit 1
+  adb shell am instrument -w -r com.ration.app.debug.test/androidx.test.runner.AndroidJUnitRunner | tee instrument.txt
+  grep -q "OK (" instrument.txt || { echo "Тест миграции не прошёл"; exit 1; }
+fi
 echo "Смоук-тест пройден"

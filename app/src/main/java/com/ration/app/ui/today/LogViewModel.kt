@@ -19,6 +19,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -41,15 +42,17 @@ class LogViewModel @Inject constructor(
     private val slotId: Long = savedState["slotId"] ?: 0L
     val day = plans.today()
     val ui = MutableStateFlow(LogUi())
-    val blocks: StateFlow<List<Block>> = catalog.blocks.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+    /** Исходные блоки скрыты (19.4): здесь остаются только свои блоки M…. */
+    val blocks: StateFlow<List<Block>> = catalog.blocks.map { l -> l.filter { !it.hidden } }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
     val foods: StateFlow<List<CustomFood>> = catalog.customFoods.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     init {
         viewModelScope.launch {
             val slot = if (slotId > 0) plans.slot(slotId) else null
             val d = slot?.day ?: day
-            val alts = slot?.let { plans.alternatives(d)[it.slot] }.orEmpty()
-            ui.value = LogUi(slot, plans.slots(d), alts)
+            plans.ensurePlan(d)
+            ui.value = LogUi(slot, plans.slots(d), emptyList())
         }
     }
 

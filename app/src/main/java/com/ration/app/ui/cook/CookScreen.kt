@@ -92,19 +92,24 @@ data class CookUi(
 
 @HiltViewModel
 class CookViewModel @Inject constructor(
+    savedState: androidx.lifecycle.SavedStateHandle,
     private val cook: CookRepository,
     private val catalog: CatalogRepository,
     private val drafts: Drafts,
 ) : ViewModel() {
     val ui = MutableStateFlow(CookUi())
+    /** Слот из конструктора (19.4); без него — ближайший неотмеченный. Запись идёт в этот слот. */
+    private var targetSlot: com.ration.app.domain.model.SlotType? =
+        savedState.get<String>("slot")?.let { com.ration.app.domain.model.SlotType.fromStored(it) }
     private val _messages = MutableSharedFlow<String>(extraBufferCapacity = 4)
     val messages = _messages.asSharedFlow()
 
     init {
         viewModelScope.launch {
-            val slot = cook.nearestOpenSlot()
+            val slotType = targetSlot ?: cook.nearestOpenSlot()
+            targetSlot = slotType
             val (k, p) = cook.defaultTargets()
-            ui.value = ui.value.copy(slot = slot, kcal = k, protein = p)
+            ui.value = ui.value.copy(slot = CookSlot.of(slotType), kcal = k, protein = p)
             run()
         }
     }
@@ -133,11 +138,12 @@ class CookViewModel @Inject constructor(
 
     fun setSlot(slot: CookSlot) = viewModelScope.launch {
         ui.value = ui.value.copy(slot = slot)
+        targetSlot = slot.slotType
         run()
     }
 
     fun record(s: Suggestion) = viewModelScope.launch {
-        val out = cook.record(s, ui.value.slot)
+        val out = cook.record(s, targetSlot ?: ui.value.slot.slotType)
         _messages.tryEmit(out.message() ?: "Записано: ${s.title}")
         run()
     }

@@ -57,12 +57,11 @@ class NotificationActionReceiver : BroadcastReceiver() {
     }
 
     companion object {
-        const val ACTION_EAT = "com.ration.app.action.EAT"
         const val ACTION_SKIP = "com.ration.app.action.SKIP"
         const val ACTION_SNOOZE = "com.ration.app.action.SNOOZE"
         const val ACTION_CONFIRM = "com.ration.app.action.CONFIRM"
         const val ACTION_WATER = "com.ration.app.action.WATER"
-        val ACTIONS = setOf(ACTION_EAT, ACTION_SKIP, ACTION_SNOOZE, ACTION_CONFIRM, ACTION_WATER)
+        val ACTIONS = setOf(ACTION_SKIP, ACTION_SNOOZE, ACTION_CONFIRM, ACTION_WATER)
         const val EXTRA_SLOT_ID = "slotId"
         const val EXTRA_DAY = "day"
     }

@@ -76,7 +76,7 @@ fun LogScreen(nav: NavController, slotId: Long, vm: LogViewModel = hiltViewModel
                     FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         FilterChip(selected = slotType == null, onClick = { slotType = null }, label = { Text("Без слота") })
                         ui.daySlots.forEach { s ->
-                            FilterChip(selected = slotType == s.slot, onClick = { slotType = s.slot }, label = { Text("${s.slot.label} ${TimeUtil.hm(s.minuteOfDay)}") })
+                            FilterChip(selected = slotType == s.slot, onClick = { slotType = s.slot }, label = { Text("${s.slot.title} ${TimeUtil.hm(s.minuteOfDay)}") })
                         }
                     }
                 }
@@ -109,7 +109,7 @@ private fun BlockTab(
         SectionTitle("Альтернативы")
         alternatives.forEach { b -> BlockRow(b, selected?.id == b.id) { selected = b } }
     }
-    SectionTitle("Каталог")
+    SectionTitle("Мои сеты")
     val kinds = slot?.kinds
     blocks.filter { it.active && (kinds == null || it.kind in kinds) }.forEach { b -> BlockRow(b, selected?.id == b.id) { selected = b } }
 

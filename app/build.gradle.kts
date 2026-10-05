@@ -16,8 +16,10 @@ android {
         applicationId = "com.ration.app"
         minSdk = 26
         targetSdk = 36
-        versionCode = 2
-        versionName = "1.1.0"
+        versionCode = 3
+        versionName = "1.2.0"
+        // Инструментальный тест миграции БД (19.7): MigrationTestHelper на эмуляторе CI
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
     // Постоянный debug-ключ: новые сборки CI ставятся поверх старых без потери данных.
@@ -130,4 +132,7 @@ dependencies {
     "apiImplementation"(libs.anthropic.java)
 
     testImplementation(libs.junit)
+    androidTestImplementation(libs.room.testing)
+    androidTestImplementation(libs.androidx.test.ext.junit)
+    androidTestImplementation(libs.androidx.test.runner)
 }

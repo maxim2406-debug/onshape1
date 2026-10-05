@@ -1,5 +1,6 @@
 package com.ration.app.data.repo
 
+import androidx.room.withTransaction
 import com.ration.app.data.db.AppDatabase
 import com.ration.app.data.db.entity.Block
 import com.ration.app.data.db.entity.BlockIngredient
@@ -12,6 +13,7 @@ import com.ration.app.data.db.entity.Substitution
 import com.ration.app.data.seed.PrepKeys
 import com.ration.app.data.settings.SettingsRepository
 import com.ration.app.domain.TimeUtil
+import com.ration.app.domain.day.SlotStates
 import com.ration.app.domain.inventory.Consumption
 import com.ration.app.domain.inventory.Shortage
 import com.ration.app.domain.inventory.UnitConv
@@ -21,7 +23,6 @@ import com.ration.app.domain.meal.MealItems
 import com.ration.app.domain.model.MealSource
 import com.ration.app.domain.model.MeatChoice
 import com.ration.app.domain.model.QuickType
-import com.ration.app.domain.model.SlotStatus
 import com.ration.app.domain.model.SlotType
 import com.ration.app.domain.model.Tags
 import com.ration.app.domain.rules.DayRules
@@ -43,7 +44,6 @@ data class LogOutcome(
     val shortages: List<Shortage> = emptyList(),
     val notes: List<String> = emptyList(),
     val limitWarnings: List<String> = emptyList(),
-    val advice: List<String> = emptyList(),
 )
 
 @Singleton
@@ -65,15 +65,6 @@ class MealRepository @Inject constructor(
     suspend fun quickRange(from: Long, to: Long): List<QuickLog> = db.quick().range(from, to)
 
     private fun nowMillis() = clock.millis()
-
-    /** «Съел по плану» — из уведомления или экрана. */
-    suspend fun eatPlanned(slotId: Long, multiplier: Double = 1.0, withFruit: Boolean? = null, meat: MeatChoice? = null): LogOutcome? {
-        val slot = plans.slot(slotId) ?: return null
-        val blockId = slot.blockId ?: return null
-        val block = catalog.block(blockId) ?: return null
-        val fruit = withFruit ?: (slot.slot == SlotType.LUNCH)
-        return logBlock(slot.day, slot.slot, block, multiplier * slot.multiplier, fruit, meat, MealSource.PLAN)
-    }
 
     /** Ингредиенты блока с учётом замен на день: заменённые не списываются. */
     private suspend fun effectiveIngredients(block: Block, day: Long): Pair<List<BlockIngredient>, List<Substitution>> {
@@ -210,49 +201,67 @@ class MealRepository @Inject constructor(
         else TimeUtil.toMillis(LocalDate.ofEpochDay(day).atTime(12, 0), clock.zone)
     }
 
-    private suspend fun insertLog(log: MealLog, shortages: List<Shortage>, notes: List<String>): LogOutcome {
+    /**
+     * Запись приёма. Если запись в слот: слот становится LOGGED, более ранние пустые слоты дня — SKIPPED
+     * (автопропуск, 19.3). Запись, списание и статусы — одной транзакцией; автопропущенные слоты сохраняются
+     * в записи, чтобы отмена вернула их.
+     */
+    private suspend fun insertLog(log0: MealLog, shortages: List<Shortage>, notes: List<String>): LogOutcome {
         val s = settings.current()
-        val before = plans.weekCounters(log.day, includeDay = true)
-        val id = db.meals().insert(log)
-        inventory.applyDeductions(log.deductions, -1)
-        // Закрыть слот: «съеден» — тот же блок, иначе «заменён».
-        log.slot?.let { slotType ->
-            plans.slots(log.day).firstOrNull { it.slot == slotType }?.let { sl ->
-                val status = if (sl.blockId != null && sl.blockId == log.blockId) SlotStatus.EATEN else SlotStatus.REPLACED
-                plans.updateSlot(sl.copy(status = status))
-            }
+        val before = plans.weekCounters(log0.day, includeDay = true)
+        log0.slot?.let { plans.ensurePlan(log0.day) }
+        val id = db.withTransaction {
+            val changes = log0.slot?.let { SlotStates.onLog(log0.day, it, plans.states(log0.day), nowMillis()) }
+            val log = log0.copy(autoSkipped = changes?.autoSkipped.orEmpty().map { it.name })
+            val newId = db.meals().insert(log)
+            inventory.applyDeductions(log.deductions, -1)
+            changes?.let { plans.applyChanges(log.day, it) }
+            newId
         }
-        val after = plans.weekCounters(log.day, includeDay = true)
+        val after = plans.weekCounters(log0.day, includeDay = true)
         val limitWarnings = DayRules.onLogWarnings(before, after, s)
-        val advice = plans.replan(log.day)
         inventory.checkThresholds()
         scheduler.rescheduleAll()
-        notifyNewWarnings(log.day)
-        return LogOutcome(id, shortages, notes, limitWarnings, advice)
+        notifyNewWarnings(log0.day)
+        return LogOutcome(id, shortages, notes, limitWarnings)
     }
 
-    suspend fun skip(slotId: Long): List<String> {
-        val slot = plans.slot(slotId) ?: return emptyList()
-        plans.updateSlot(slot.copy(status = SlotStatus.SKIPPED))
-        val advice = plans.replan(slot.day)
-        scheduler.rescheduleAll()
-        return advice
-    }
-
-    /** Отмена записи: запасы возвращаются, слот снова «запланирован». */
+    /** Отмена записи: запасы возвращаются; слот без других записей и автопропущенные этой записью слоты — снова «не отмечен». */
     suspend fun undo(logId: Long) {
         val log = db.meals().get(logId) ?: return
-        inventory.applyDeductions(log.deductions, +1)
-        db.meals().delete(log)
-        log.slot?.let { slotType ->
-            val others = db.meals().forDay(log.day).any { it.slot == slotType }
-            if (!others) plans.slots(log.day).firstOrNull { it.slot == slotType }?.let {
-                if (it.status == SlotStatus.EATEN || it.status == SlotStatus.REPLACED) plans.updateSlot(it.copy(status = SlotStatus.PLANNED))
-            }
+        db.withTransaction {
+            inventory.applyDeductions(log.deductions, +1)
+            db.meals().delete(log)
+            val stillHas = log.slot?.let { sl -> db.meals().forSlot(log.day, sl).isNotEmpty() } ?: false
+            val auto = log.autoSkipped.mapNotNull { SlotType.fromStored(it) }
+            plans.applyChanges(log.day, SlotStates.onUndo(log.slot, stillHas, auto, plans.states(log.day)))
         }
-        plans.replan(log.day)
         inventory.checkThresholds()
         scheduler.rescheduleAll()
+    }
+
+    suspend fun logsForSlot(day: Long, slot: SlotType): List<MealLog> = db.meals().forSlot(day, slot)
+
+    /**
+     * «Изменить» записанный приём (19.2): прежние записи слота отменяются (запасы возвращаются), состав
+     * записывается одной новой записью. Автопропуски прежних записей переносятся в новую, чтобы её отмена
+     * вернула и их.
+     */
+    suspend fun replaceSlot(day: Long, slot: SlotType, name: String, items: List<MealItem>, withFruit: Boolean): LogOutcome {
+        val old = db.meals().forSlot(day, slot)
+        val inherited = old.flatMap { it.autoSkipped }.distinct()
+        db.withTransaction {
+            old.forEach { o ->
+                inventory.applyDeductions(o.deductions, +1)
+                db.meals().delete(o)
+            }
+            if (old.isNotEmpty()) plans.applyChanges(day, SlotStates.onUndo(slot, false, emptyList(), plans.states(day)))
+        }
+        val out = logItems(day, slot, name, items, withFruit = withFruit)
+        if (inherited.isNotEmpty()) db.meals().get(out.logId)?.let { l ->
+            db.meals().update(l.copy(autoSkipped = (l.autoSkipped + inherited).distinct()))
+        }
+        return out
     }
 
     suspend fun quick(type: QuickType, amount: Double = 1.0): List<DayWarning> {

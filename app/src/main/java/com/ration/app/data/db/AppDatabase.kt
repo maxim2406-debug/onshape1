@@ -4,6 +4,8 @@ import androidx.room.Database
 import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
 import com.ration.app.data.db.dao.BlockDao
+import com.ration.app.data.db.dao.DishDao
+import com.ration.app.data.db.dao.SlotStateDao
 import com.ration.app.data.db.dao.HealthDao
 import com.ration.app.data.db.dao.MaintenanceDao
 import com.ration.app.data.db.dao.MealDao
@@ -19,6 +21,8 @@ import com.ration.app.data.db.entity.BlockIngredient
 import com.ration.app.data.db.entity.BpLog
 import com.ration.app.data.db.entity.CustomFood
 import com.ration.app.data.db.entity.DayPlan
+import com.ration.app.data.db.entity.Dish
+import com.ration.app.data.db.entity.SlotState
 import com.ration.app.data.db.entity.MealLog
 import com.ration.app.data.db.entity.PlannedSlot
 import com.ration.app.data.db.entity.Prep
@@ -36,9 +40,9 @@ import com.ration.app.data.db.entity.WeightLog
     entities = [
         Product::class, StockItem::class, Purchase::class, PurchaseLine::class, Block::class, BlockIngredient::class,
         PrepTemplate::class, Prep::class, MealLog::class, CustomFood::class, Substitution::class, DayPlan::class,
-        PlannedSlot::class, QuickLog::class, WeightLog::class, BpLog::class, Recipe::class,
+        PlannedSlot::class, QuickLog::class, WeightLog::class, BpLog::class, Recipe::class, SlotState::class, Dish::class,
     ],
-    version = 2,
+    version = 3, // = AppDatabase.VERSION
     exportSchema = true,
 )
 @TypeConverters(Converters::class)
@@ -54,9 +58,13 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun health(): HealthDao
     abstract fun maintenance(): MaintenanceDao
     abstract fun recipes(): RecipeDao
+    abstract fun slotStates(): SlotStateDao
+    abstract fun dishes(): DishDao
 
     companion object {
         const val NAME = "ration.db"
+        /** Совпадает с @Database(version). */
+        const val VERSION = 3
 
         /**
          * v1 → v2 (разделы 12–18): новые поля продукта, партий, приёмов и блоков, таблица рецептов.
@@ -89,6 +97,41 @@ abstract class AppDatabase : RoomDatabase() {
                         "`tags` TEXT NOT NULL, `ingredients` TEXT NOT NULL, `method` TEXT NOT NULL, `activeMin` INTEGER NOT NULL, " +
                         "`totalMin` INTEGER NOT NULL, `steps` TEXT NOT NULL, `rawToCooked` REAL NOT NULL, `source` TEXT NOT NULL, " +
                         "`version` INTEGER NOT NULL, `hidden` INTEGER NOT NULL, PRIMARY KEY(`id`))",
+                ).forEach(db::execSQL)
+            }
+        }
+
+        /**
+         * v2 → v3 (раздел 19): шесть слотов, состояния приёмов, отдельные блюда.
+         * - SNACK_1, SNACK_2, ROAD_BAR (все между обедом и ужином) → SNACK_PM (П) в журнале и расписании;
+         *   при совпадении дня и слота в planned_slot лишняя строка расписания удаляется (журнал не трогается).
+         * - slot_state: LOGGED для слотов, в которых есть записи; пустые слоты строк не получают (= EMPTY),
+         *   автопропуск задним числом не делается.
+         * - Исходные блоки скрываются (hidden = 1); свои блоки M… остаются. Блюда создаёт приложение (DishSplitter, INSERT OR IGNORE).
+         * - day_plan.dayType не удаляется и не переименовывается.
+         * Ни одна строка журнала, склада, библиотеки и настроек не удаляется.
+         */
+        val MIGRATION_2_3 = object : androidx.room.migration.Migration(2, 3) {
+            override fun migrate(db: androidx.sqlite.db.SupportSQLiteDatabase) {
+                listOf(
+                    "UPDATE `meal_log` SET `slot` = 'SNACK_PM' WHERE `slot` IN ('SNACK_1', 'SNACK_2', 'ROAD_BAR')",
+                    "UPDATE `planned_slot` SET `slot` = 'SNACK_PM' WHERE `slot` = 'SNACK_1'",
+                    "DELETE FROM `planned_slot` WHERE `slot` = 'SNACK_2' AND `day` IN (SELECT `day` FROM `planned_slot` WHERE `slot` = 'SNACK_PM')",
+                    "UPDATE `planned_slot` SET `slot` = 'SNACK_PM' WHERE `slot` = 'SNACK_2'",
+                    "DELETE FROM `planned_slot` WHERE `slot` = 'ROAD_BAR' AND `day` IN (SELECT `day` FROM `planned_slot` WHERE `slot` = 'SNACK_PM')",
+                    "UPDATE `planned_slot` SET `slot` = 'SNACK_PM' WHERE `slot` = 'ROAD_BAR'",
+                    "ALTER TABLE `block` ADD COLUMN `hidden` INTEGER NOT NULL DEFAULT 0",
+                    "UPDATE `block` SET `hidden` = 1 WHERE `custom` = 0",
+                    "ALTER TABLE `meal_log` ADD COLUMN `autoSkipped` TEXT NOT NULL DEFAULT '[]'",
+                    "CREATE TABLE IF NOT EXISTS `slot_state` (`day` INTEGER NOT NULL, `slot` TEXT NOT NULL, `status` TEXT NOT NULL, " +
+                        "`autoSkipped` INTEGER NOT NULL, `updatedAt` INTEGER NOT NULL, PRIMARY KEY(`day`, `slot`))",
+                    "INSERT OR IGNORE INTO `slot_state` (`day`, `slot`, `status`, `autoSkipped`, `updatedAt`) " +
+                        "SELECT `day`, `slot`, 'LOGGED', 0, MAX(`atMillis`) FROM `meal_log` WHERE `slot` IS NOT NULL GROUP BY `day`, `slot`",
+                    "CREATE TABLE IF NOT EXISTS `dish` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `legacyBlockId` INTEGER NOT NULL, " +
+                        "`componentIndex` INTEGER NOT NULL, `name` TEXT NOT NULL, `productId` INTEGER, `prepKey` TEXT, `qty` REAL NOT NULL, " +
+                        "`unit` TEXT NOT NULL, `kcal` REAL NOT NULL, `protein` REAL NOT NULL, `tags` TEXT NOT NULL, `blockCode` TEXT NOT NULL, " +
+                        "`hidden` INTEGER NOT NULL)",
+                    "CREATE UNIQUE INDEX IF NOT EXISTS `index_dish_legacyBlockId_componentIndex` ON `dish` (`legacyBlockId`, `componentIndex`)",
                 ).forEach(db::execSQL)
             }
         }

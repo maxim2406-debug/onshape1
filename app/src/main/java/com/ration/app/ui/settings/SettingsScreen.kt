@@ -63,7 +63,6 @@ import com.ration.app.data.settings.SettingsRepository
 import com.ration.app.domain.TimeUtil
 import com.ration.app.domain.backup.BackupCodec
 import com.ration.app.domain.model.AppSettings
-import com.ration.app.domain.model.DayType
 import com.ration.app.domain.model.SlotType
 import com.ration.app.notifications.ReminderScheduler
 import com.ration.app.ui.components.BackTopBar
@@ -99,10 +98,11 @@ class SettingsViewModel @Inject constructor(
         scheduler.rescheduleAll()
     }
 
-    /** Смена времени слотов: пересобрать план сегодня/завтра (время и напоминания). */
+    /** Смена расписания или напоминаний слотов: сегодня и завтра пересобираются (время и напоминания). */
     fun updateSlots(t: (AppSettings) -> AppSettings) = viewModelScope.launch {
+        plans.settingsWithSchedule()
         repo.update(t)
-        plans.rebuild(plans.today()); plans.rebuild(plans.today() + 1)
+        plans.applySchedule()
     }
 
     fun setApiKey(k: String?) { keys.setApiKey(k); if (k.isNullOrBlank()) update { it.copy(claudeApiEnabled = false) } }
@@ -141,9 +141,6 @@ fun SettingsScreen(nav: NavController, vm: SettingsViewModel = hiltViewModel()) 
     var refresh by remember { mutableIntStateOf(0) }
     LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { refresh++ }
     val notifPerm = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { refresh++ }
-    val calPerm = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { ok ->
-        vm.update { it.copy(calendarHint = ok) }; refresh++
-    }
     var backupPassword by remember { mutableStateOf("") }
     var showExportWarning by remember { mutableStateOf(false) }
     var confirmDelete by remember { mutableStateOf(false) }
@@ -167,16 +164,6 @@ fun SettingsScreen(nav: NavController, vm: SettingsViewModel = hiltViewModel()) 
                 PermissionRow("Точные будильники", exactOk, "Без разрешения напоминания приходят с задержкой до нескольких минут.") {
                     if (Build.VERSION.SDK_INT >= 31) context.startActivity(Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM, Uri.parse("package:${context.packageName}")))
                 }
-                val calOk = granted(context, Manifest.permission.READ_CALENDAR)
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Column(Modifier.weight(1f)) {
-                        Text("Подсказка типа дня по календарю")
-                        Text("Читается только наличие событий до ${TimeUtil.hm(s.calendarCutoff)}, без названий и участников.", style = MaterialTheme.typography.bodySmall)
-                    }
-                    Switch(s.calendarHint && calOk, { on ->
-                        if (on && !calOk) calPerm.launch(Manifest.permission.READ_CALENDAR) else vm.update { it.copy(calendarHint = on) }
-                    })
-                }
             }
 
             SectionTitle("Цели")
@@ -185,6 +172,8 @@ fun SettingsScreen(nav: NavController, vm: SettingsViewModel = hiltViewModel()) 
             IntRow("Ккал: ориентир", s.kcalTarget) { v -> vm.update { it.copy(kcalTarget = v) } }
             IntRow("Белок: минимум, г", s.proteinMin) { v -> vm.update { it.copy(proteinMin = v) } }
             IntRow("Белок: максимум, г", s.proteinMax) { v -> vm.update { it.copy(proteinMax = v) } }
+            IntRow("Белок: ориентир, г", s.proteinTarget) { v -> vm.update { it.copy(proteinTarget = v.coerceIn(0, 400)) } }
+            IntRow("Вода: цель, мл", s.waterGoalMl) { v -> vm.update { it.copy(waterGoalMl = v.coerceIn(250, 6000)) } }
 
             var veg by remember(s.vegQuickGrams) { mutableStateOf(s.vegQuickGrams.joinToString(", ")) }
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -195,17 +184,22 @@ fun SettingsScreen(nav: NavController, vm: SettingsViewModel = hiltViewModel()) 
                 }) { Text("OK") }
             }
 
-            SectionTitle("Время слотов")
-            DayType.entries.forEach { t ->
-                Text("Тип ${t.label}", style = MaterialTheme.typography.labelLarge)
-                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    s.slotTimes(t).toSortedMap(compareBy { it.ordinal }).forEach { (slot, minute) ->
-                        TimeField(slot.label, minute, { m -> vm.updateSlots { st -> if (t == DayType.A) st.copy(slotTimesA = st.slotTimesA + (slot to m)) else st.copy(slotTimesB = st.slotTimesB + (slot to m)) } },
-                            Modifier.padding(vertical = 2.dp).fillMaxWidth(0.45f))
-                    }
+            SectionTitle("Время приёмов")
+            // 19.8: одно расписание шести приёмов, без типов дня
+            val times = s.times()
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                SlotType.entries.forEach { slot ->
+                    TimeField(slot.title, times[slot] ?: 0, { m -> vm.updateSlots { st -> st.copy(slotTimes = st.times() + (slot to m)) } },
+                        Modifier.padding(vertical = 2.dp).fillMaxWidth(0.45f))
                 }
             }
-            TimeField("Батончик в дороге (В)", s.roadBarTime, { m -> vm.updateSlots { it.copy(roadBarTime = m) } })
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    Text("Напоминать о перекусах (С, П, Е)")
+                    Text("Завтрак, обед и ужин напоминают всегда.", style = MaterialTheme.typography.bodySmall)
+                }
+                Switch(s.snackReminders, { on -> vm.updateSlots { it.copy(snackReminders = on) } })
+            }
 
             SectionTitle("Закупки и напоминания")
             IntRow("Порог закупки, %", s.buyThresholdPct) { v -> vm.update { it.copy(buyThresholdPct = v.coerceIn(1, 100)) } }

@@ -15,20 +15,17 @@ data class AppSettings(
     val waterCheckMinMl: Int = 1000,
     val waterCheckTime: Int = 15 * 60,
 
-    val slotTimesB: Map<SlotType, Int> = mapOf(
-        SlotType.BREAKFAST to 9 * 60,
-        SlotType.LUNCH to 14 * 60,
-        SlotType.DINNER to 20 * 60 + 30,
-        SlotType.EVENING to 22 * 60,
-    ),
-    val slotTimesA: Map<SlotType, Int> = mapOf(
-        SlotType.LUNCH to 12 * 60,
-        SlotType.SNACK_1 to 15 * 60,
-        SlotType.SNACK_2 to 17 * 60 + 30,
-        SlotType.DINNER to 20 * 60 + 30,
-        SlotType.EVENING to 22 * 60,
-    ),
+    /**
+     * Время шести приёмов (19.1, 19.8): одно расписание без типов дня.
+     * null — ещё не перенесено из прежних расписаний А/Б (см. [SlotSchedule.migrate]).
+     */
+    val slotTimes: Map<SlotType, Int>? = null,
+    /** Прежние расписания типов дня Б и А (до версии 3). Только для переноса, не редактируются. */
+    val slotTimesB: Map<String, Int> = mapOf("BREAKFAST" to 9 * 60, "LUNCH" to 14 * 60, "DINNER" to 20 * 60 + 30, "EVENING" to 22 * 60),
+    val slotTimesA: Map<String, Int> = mapOf("LUNCH" to 12 * 60, "SNACK_1" to 15 * 60, "SNACK_2" to 17 * 60 + 30, "DINNER" to 20 * 60 + 30, "EVENING" to 22 * 60),
     val roadBarTime: Int = 16 * 60 + 30,
+    /** Напоминания «нет записи» для перекусов С, П, Е (основные приёмы напоминают всегда). */
+    val snackReminders: Boolean = false,
 
     /** Контрольные суммы 6.2 (без Е и фрукта). */
     val checksumBMin: Int = 1550,
@@ -100,9 +97,37 @@ data class AppSettings(
     val hiddenSuggestions: List<String> = emptyList(),
     val seeded: Boolean = false,
 ) {
-    fun slotTimes(type: DayType): Map<SlotType, Int> = if (type == DayType.A) slotTimesA else slotTimesB
+    /** Действующее расписание шести слотов. */
+    fun times(): Map<SlotType, Int> = slotTimes ?: SlotSchedule.fromLegacy(slotTimesB, slotTimesA, DayType.B)
 
     companion object {
         val CLAUDE_MODELS = listOf("claude-opus-5-5", "claude-sonnet-5-5", "claude-haiku-4-5", "claude-fable-5-1")
     }
+}
+
+/** Перенос расписаний типов дня в одно расписание (19.8). Новых чисел не придумывает. */
+object SlotSchedule {
+    /**
+     * Слоты берутся из расписания типа дня, выбранного на сегодня ([today]); недостающие — из второго расписания.
+     * П — первый перекус после обеда (SNACK_1, затем SNACK_2). С раньше не было: середина между З и О,
+     * округлённая до 30 минут. Порядок времени З < С < О < П < У < Е сохраняется.
+     */
+    fun fromLegacy(b: Map<String, Int>, a: Map<String, Int>, today: DayType?): Map<SlotType, Int> {
+        val primary = if (today == DayType.A) a else b
+        val secondary = if (today == DayType.A) b else a
+        fun pick(vararg keys: String): Int? = keys.firstNotNullOfOrNull { primary[it] } ?: keys.firstNotNullOfOrNull { secondary[it] }
+        val z = pick("BREAKFAST") ?: 9 * 60
+        val o = pick("LUNCH") ?: 14 * 60
+        val p = pick("SNACK_1", "SNACK_2", "ROAD_BAR") ?: 15 * 60
+        val u = pick("DINNER") ?: 20 * 60 + 30
+        val e = pick("EVENING") ?: 22 * 60
+        val c = ((z + o) / 2 / 30) * 30
+        return linkedMapOf(
+            SlotType.BREAKFAST to z, SlotType.SNACK_AM to c, SlotType.LUNCH to o,
+            SlotType.SNACK_PM to p, SlotType.DINNER to u, SlotType.EVENING to e,
+        )
+    }
+
+    fun migrate(s: AppSettings, today: DayType?): AppSettings =
+        if (s.slotTimes != null) s else s.copy(slotTimes = fromLegacy(s.slotTimesB, s.slotTimesA, today))
 }

@@ -73,6 +73,7 @@ class FoodListViewModel @Inject constructor(
     private val settings: SettingsRepository,
 ) : ViewModel() {
     val entries = catalog.entries.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+    val dishes = catalog.dishEntries.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
     val sort = settings.settings.map { runCatching { SortMode.valueOf(it.librarySort) }.getOrDefault(SortMode.FREQUENT) }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), SortMode.FREQUENT)
 
@@ -98,12 +99,15 @@ fun FoodList(
     initialQuery: String = "",
     showHiddenToggle: Boolean = false,
     includeCustomFoods: Boolean = true,
+    includeDishes: Boolean = false,
     onPick: (FoodEntry) -> Unit,
     onAddNew: (String) -> Unit,
     trailing: (@Composable (FoodEntry) -> Unit)? = null,
     vm: FoodListViewModel = hiltViewModel(),
 ) {
-    val entries by vm.entries.collectAsStateWithLifecycle()
+    val products by vm.entries.collectAsStateWithLifecycle()
+    val dishes by vm.dishes.collectAsStateWithLifecycle()
+    val entries = remember(products, dishes, includeDishes) { if (includeDishes) dishes + products else products }
     val sort by vm.sort.collectAsStateWithLifecycle()
     var query by rememberSaveable { mutableStateOf(initialQuery) }
     var debounced by remember { mutableStateOf(initialQuery) }
@@ -111,7 +115,7 @@ fun FoodList(
     var sortMenu by remember { mutableStateOf(false) }
     var catMenu by remember { mutableStateOf(false) }
     LaunchedEffect(query) { delay(150); debounced = query }
-    val source = remember(entries, includeCustomFoods) { if (includeCustomFoods) entries else entries.filter { it.productId != null } }
+    val source = remember(entries, includeCustomFoods) { if (includeCustomFoods) entries else entries.filter { it.customFoodId == null } }
     val hits: List<FoodHit> = remember(source, debounced, sort, filters) { FoodSearch.search(source, debounced, sort, filters) }
     val categories = remember(entries) { entries.map { it.category }.filter { it.isNotBlank() }.distinct().sortedWith { a, b -> FoodSearch.compareNames(a, b) } }
 
@@ -175,7 +179,10 @@ fun FoodRow(h: FoodHit, onClick: () -> Unit, trailing: (@Composable (FoodEntry) 
             val approx = if (e.source == ProductSource.REFERENCE) "≈ " else ""
             val per = unitLabel(e.unit)
             Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                Text("$approx${e.kcal100?.let { TimeUtil.num(it) } ?: "—"} ккал · ${e.protein100?.let { TimeUtil.num(it) } ?: "—"} г белка на $per",
+                val d = e.dish
+                Text(
+                    if (d != null) "блюдо · ${TimeUtil.num(d.qty)} ${d.unit.label} · $approx${Math.round(d.kcal)} ккал · ${TimeUtil.num(d.protein)} г белка"
+                    else "$approx${e.kcal100?.let { TimeUtil.num(it) } ?: "—"} ккал · ${e.protein100?.let { TimeUtil.num(it) } ?: "—"} г белка на $per",
                     style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 if (Tags.SALTY in e.tags) Text("соль", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.secondary)
                 if (e.hidden) Text("скрыт", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.outline)
@@ -193,6 +200,7 @@ fun FoodPickerDialog(
     title: String,
     onDismiss: () -> Unit,
     includeCustomFoods: Boolean = true,
+    includeDishes: Boolean = false,
     onPick: (FoodEntry) -> Unit,
 ) {
     var adding by remember { mutableStateOf<String?>(null) }
@@ -203,7 +211,7 @@ fun FoodPickerDialog(
                     Text(title, style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f).padding(start = 8.dp))
                     TextButton(onClick = onDismiss) { Text("Закрыть") }
                 }
-                FoodList(includeCustomFoods = includeCustomFoods, onPick = onPick, onAddNew = { adding = it })
+                FoodList(includeCustomFoods = includeCustomFoods, includeDishes = includeDishes, onPick = onPick, onAddNew = { adding = it })
             }
         }
     }

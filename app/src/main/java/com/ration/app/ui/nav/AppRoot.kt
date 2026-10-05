@@ -147,11 +147,17 @@ fun AppRoot(activity: MainActivity) {
                 BlockDetailScreen(nav, it.arguments?.getLong("id") ?: 0)
             }
             composable("library") { com.ration.app.ui.library.LibraryScreen(nav) }
-            composable("cook") { com.ration.app.ui.cook.CookScreen(nav) }
+            composable(
+                "cook?slot={slot}",
+                arguments = listOf(navArgument("slot") { type = NavType.StringType; nullable = true; defaultValue = null }),
+            ) { com.ration.app.ui.cook.CookScreen(nav) }
             composable("inventory") { com.ration.app.ui.pantry.InventoryScreen(nav) }
             composable(
-                "build/{slotId}/{blockId}",
-                arguments = listOf(navArgument("slotId") { type = NavType.LongType }, navArgument("blockId") { type = NavType.LongType }),
+                "build/{slotId}/{blockId}?edit={edit}",
+                arguments = listOf(
+                    navArgument("slotId") { type = NavType.LongType }, navArgument("blockId") { type = NavType.LongType },
+                    navArgument("edit") { type = NavType.BoolType; defaultValue = false },
+                ),
             ) { com.ration.app.ui.today.BuilderScreen(nav) }
             composable("log/{slotId}", arguments = listOf(navArgument("slotId") { type = NavType.LongType })) {
                 LogScreen(nav, it.arguments?.getLong("slotId") ?: 0)

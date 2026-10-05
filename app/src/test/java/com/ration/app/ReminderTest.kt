@@ -60,8 +60,9 @@ class ReminderTest {
         assertEquals(now.plusMinutes(1), ReminderRules.nextMarkReminder(lunch, now, s, zone))
     }
 
-    @Test fun eveningWithoutBlockNoReminder() {
-        val ev = PlannedSlot(id = 3, day = day, slot = SlotType.EVENING, minuteOfDay = 22 * 60, blockId = null)
+    /** Перекус без напоминаний (по умолчанию для С, П, Е): optional = true. */
+    @Test fun optionalSnackNoReminder() {
+        val ev = PlannedSlot(id = 3, day = day, slot = SlotType.EVENING, minuteOfDay = 22 * 60, blockId = null, optional = true)
         assertNull(ReminderRules.nextMarkReminder(ev, at(10), s, zone))
     }
 }

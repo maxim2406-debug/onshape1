@@ -8,7 +8,6 @@ import com.ration.app.data.seed.SeedBundle
 import com.ration.app.data.seed.SeedData
 import com.ration.app.domain.inventory.Consumption
 import com.ration.app.domain.inventory.StockSnapshot
-import com.ration.app.domain.plan.Availability
 
 object TestData {
     val seed: SeedBundle by lazy { SeedData.build() }
@@ -25,7 +24,4 @@ object TestData {
         return stock to preps
     }
 
-    fun availability(today: Long, stock: List<StockItem>, preps: List<Prep>): (Block) -> Availability = { b ->
-        Availability(Consumption.canMake(ingredients(b), 1.0, products, StockSnapshot(stock, preps, today)))
-    }
 }

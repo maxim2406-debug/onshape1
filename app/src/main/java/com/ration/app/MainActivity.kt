@@ -42,10 +42,14 @@ class MainActivity : FragmentActivity() {
             return
         }
         val route = intent.getStringExtra(EXTRA_ROUTE) ?: return
-        if (ROUTE_WHITELIST.any { route == it || route.startsWith("$it/") }) {
-            val slot = intent.getLongExtra(EXTRA_SLOT_ID, 0)
-            pendingRoute.value = if (route.startsWith("log/") && slot > 0) "log/$slot" else route
-        }
+        val slot = intent.getLongExtra(EXTRA_SLOT_ID, 0)
+        // Только точные маршруты из списка; номер слота — отдельным числовым extra (никаких строк извне в аргументах).
+        pendingRoute.value = when {
+            route == "slot" && slot > 0 -> "build/$slot/0"
+            route == "slot" -> "today"
+            route in ROUTE_WHITELIST -> route
+            else -> null
+        } ?: return
     }
 
     fun setSecure(on: Boolean) {
@@ -56,6 +60,6 @@ class MainActivity : FragmentActivity() {
     companion object {
         const val EXTRA_ROUTE = "route"
         const val EXTRA_SLOT_ID = "slotId"
-        private val ROUTE_WHITELIST = setOf("today", "tomorrow", "shopping", "preps", "prep_checklist", "health", "week", "log", "import", "cook", "inventory", "library")
+        private val ROUTE_WHITELIST = setOf("today", "tomorrow", "shopping", "preps", "prep_checklist", "health", "week", "import", "inventory", "library", "cook")
     }
 }

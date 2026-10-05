@@ -3,6 +3,9 @@
 
 ui.py tap "текст" [--contains] [--index N] — ищет узел с текстом, при необходимости листает вниз, нажимает в центр.
 ui.py has "текст" — код 0, если текст на экране.
+ui.py hasnot "текст" — код 0, если текста нет нигде на экране (с прокруткой).
+ui.py tapnear "якорь" "кнопка" — нажать ближайшую кнопку ниже якоря (кнопка внутри карточки).
+ui.py top — прокрутить в начало.
 """
 import re
 import subprocess
@@ -38,8 +41,59 @@ def find(root, text, contains):
     return out
 
 
+def swipe_up(n=1):
+    for _ in range(n):
+        adb("shell", "input", "swipe", "160", "200", "160", "560", "250")
+        time.sleep(0.5)
+
+
+def tapnear(anchor, button):
+    swipe_up(6)
+    for attempt in range(10):
+        root = dump()
+        if root is not None:
+            anchors = find(root, anchor, False)
+            if anchors:
+                ax, ay, _ = anchors[0]
+                below = [h for h in find(root, button, False) if h[1] > ay]
+                if below:
+                    x, y, t = min(below, key=lambda h: h[1])
+                    print(f"нажатие: «{t}» под «{anchor}» ({x},{y})")
+                    adb("shell", "input", "tap", str(x), str(y))
+                    return 0
+                # якорь виден, кнопка ниже края экрана — прокрутить немного
+                adb("shell", "input", "swipe", "160", "450", "160", "250", "300")
+                time.sleep(1)
+                continue
+        adb("shell", "input", "swipe", "160", "500", "160", "250", "300")
+        time.sleep(1)
+    print(f"не найдено: «{button}» под «{anchor}»")
+    return 1
+
+
+def hasnot(text):
+    swipe_up(6)
+    for attempt in range(6):
+        root = dump()
+        if root is not None and find(root, text, True):
+            print(f"найдено лишнее: «{text}»")
+            return 1
+        adb("shell", "input", "swipe", "160", "500", "160", "200", "300")
+        time.sleep(1)
+    print(f"нет: «{text}»")
+    return 0
+
+
 def main():
-    cmd, text = sys.argv[1], sys.argv[2]
+    cmd = sys.argv[1]
+    if cmd == "top":
+        swipe_up(6)
+        return 0
+    if cmd == "tapnear":
+        return tapnear(sys.argv[2], sys.argv[3])
+    if cmd == "hasnot":
+        return hasnot(sys.argv[2])
+    text = sys.argv[2]
     contains = "--contains" in sys.argv
     index = int(sys.argv[sys.argv.index("--index") + 1]) if "--index" in sys.argv else 0
     for attempt in range(6):

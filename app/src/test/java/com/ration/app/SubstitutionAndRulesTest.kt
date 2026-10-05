@@ -6,10 +6,8 @@ import com.ration.app.data.db.entity.QuickLog
 import com.ration.app.data.db.entity.WeightLog
 import com.ration.app.domain.TimeUtil
 import com.ration.app.domain.model.AppSettings
-import com.ration.app.domain.model.DayType
 import com.ration.app.domain.model.MealSource
 import com.ration.app.domain.model.QuickType
-import com.ration.app.domain.plan.DayTypeHint
 import com.ration.app.domain.plan.WeekCounters
 import com.ration.app.domain.report.HealthStats
 import com.ration.app.domain.rules.DayRules
@@ -70,13 +68,6 @@ class SubstitutionAndRulesTest {
         assertEquals(2, w.size)
         assertTrue(DayRules.isRedDay(2201.0, s))
         assertFalse(DayRules.isRedDay(2200.0, s))
-    }
-
-    @Test fun calendarHint() {
-        assertEquals(DayType.A, DayTypeHint.suggest(listOf(DayTypeHint.Event(9 * 60, 60)), s).first)
-        assertEquals(DayType.B, DayTypeHint.suggest(listOf(DayTypeHint.Event(9 * 60, 30)), s).first)
-        assertEquals(DayType.B, DayTypeHint.suggest(listOf(DayTypeHint.Event(11 * 60, 90)), s).first)
-        assertEquals(DayType.B, DayTypeHint.suggest(emptyList(), s).first)
     }
 
     @Test fun weightRate() {

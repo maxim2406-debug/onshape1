@@ -14,7 +14,7 @@ import com.ration.app.domain.model.CookSlot
 import com.ration.app.domain.model.FoodRole
 import com.ration.app.domain.model.MealKind
 import com.ration.app.domain.model.MealSource
-import com.ration.app.domain.model.SlotStatus
+import com.ration.app.domain.day.SlotStates
 import com.ration.app.domain.model.SlotType
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -67,22 +67,22 @@ class CookRepository @Inject constructor(
         return s
     }
 
-    /** Ближайший неотмеченный слот по времени (18.1). */
-    suspend fun nearestOpenSlot(): CookSlot {
+    private fun nowMinute() = LocalTime.now(clock).let { it.hour * 60 + it.minute }
+
+    /** Ближайший неотмеченный слот по времени (18.1, 19.8). */
+    suspend fun nearestOpenSlot(): SlotType {
         val today = plans.today()
         plans.ensurePlan(today)
-        val now = LocalTime.now(clock).let { it.hour * 60 + it.minute }
-        val open = plans.slots(today).filter { it.status == SlotStatus.PLANNED }.sortedBy { it.minuteOfDay }
-        val slot = open.firstOrNull { it.minuteOfDay >= now - 90 } ?: open.lastOrNull()
-        return slot?.let { CookSlot.of(it.slot) } ?: CookSlot.DINNER
+        return plans.nearestEmpty(today, nowMinute()) ?: SlotType.DINNER
     }
 
-    /** Цель по умолчанию: остаток дневного бюджета / число неотмеченных слотов. */
+    /** Цель по умолчанию: остаток дневной цели / число слотов «не отмечен» впереди по времени (19.8). */
     suspend fun defaultTargets(): Pair<Double, Double> {
         val today = plans.today()
+        val s = plans.settingsWithSchedule()
         val logs = meals.logsRange(today, today)
-        val open = plans.slots(today).count { it.status == SlotStatus.PLANNED && it.slot != SlotType.EVENING }
-        return CookTargets.default(settings.current(), logs.sumOf { it.kcal }, logs.sumOf { it.protein }, open)
+        val open = SlotStates.emptyAhead(s.times(), plans.states(today), nowMinute()).size
+        return CookTargets.default(s, logs.sumOf { it.kcal }, logs.sumOf { it.protein }, open)
     }
 
     suspend fun baseRequest(slot: CookSlot, kcal: Double, protein: Double): SuggestRequest {
@@ -116,9 +116,8 @@ class CookRepository @Inject constructor(
     }
 
     /** Запись варианта (18.5): тем же путём, что и конструктор — FIFO, счётчики, отмена. */
-    suspend fun record(s: Suggestion, slot: CookSlot): LogOutcome {
+    suspend fun record(s: Suggestion, slotType: SlotType): LogOutcome {
         val day = plans.today()
-        val slotType = plans.slots(day).firstOrNull { it.slot == slot.slotType && it.status == SlotStatus.PLANNED }?.slot
         val b = s.block
         return if (b != null) meals.logBlock(day, slotType, b, s.multiplier, false, null, MealSource.BLOCK)
         else meals.logItems(day, slotType, s.title, s.items.map { it.toMealItem() }, source = MealSource.CUSTOM)

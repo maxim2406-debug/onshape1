@@ -135,6 +135,8 @@ object ItemsConsumption {
     /** Строка «без списания» или «частично». */
     fun shortfall(item: MealItem, cat: FoodCatalog): Double {
         if (item.untracked || item.qty <= EPS) return 0.0
+        // свой продукт и блюдо «на улице» не хранятся на складе — нехватки нет
+        if (item.productId == null && item.prepKey == null) return 0.0
         val p = item.productId?.let(cat.products::get)
         val need = if (item.prepKey != null || p == null) item.qty else UnitConv.toProductUnit(item.qty, item.unit, p) ?: item.qty
         return (need - item.deducted).coerceAtLeast(0.0)

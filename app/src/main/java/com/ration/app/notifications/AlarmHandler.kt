@@ -11,7 +11,6 @@ import com.ration.app.domain.TimeUtil
 import com.ration.app.domain.model.QuickType
 import com.ration.app.domain.model.SlotStatus
 import com.ration.app.domain.model.SlotType
-import com.ration.app.domain.model.Tags
 import com.ration.app.domain.reminders.ReminderRules
 import java.time.Clock
 import java.time.LocalDate
@@ -52,16 +51,14 @@ class AlarmHandler @Inject constructor(
                 val tomorrow = today + 1
                 val plan = plans.ensurePlan(tomorrow)
                 if (!plan.confirmed) {
-                    val slots = plans.slots(tomorrow)
-                    val blocks = catalog.allBlocks().associateBy { it.id }
-                    val lines = slots.sortedBy { it.minuteOfDay }.mapNotNull { sl ->
-                        sl.blockId?.let(blocks::get)?.let { "${TimeUtil.hm(sl.minuteOfDay)} ${it.code}" }
-                    }
-                    val oat = slots.any { sl -> sl.blockId?.let(blocks::get)?.tags?.contains(Tags.PREP_NIGHT) == true }
+                    // 19.8: без типа дня — шесть приёмов по одному расписанию и заготовки, которые пора съесть
+                    val times = plans.settingsWithSchedule().times()
                     val text = buildString {
-                        append("Тип ${plan.dayType.label}${if (plan.road) " + дорога" else ""}: ")
-                        append(lines.joinToString(", "))
-                        if (oat) append(". Вечером: банка овсянки на ночь (З5).")
+                        append("Приёмы: ")
+                        append(SlotType.entries.joinToString(", ") { "${it.short} ${TimeUtil.hm(times[it] ?: 0)}" })
+                        val soon = inventory.activePrepsList().filter { it.expiresDay <= tomorrow }.map { it.name }.distinct()
+                        if (soon.isNotEmpty()) append(". Съесть до завтра: ${soon.joinToString(", ")}")
+                        append(".")
                     }
                     // 18.5: если сегодня не хватает белка — ссылка на варианты из холодильника
                     val eaten = meals.logsRange(today, today).sumOf { it.protein }
@@ -105,20 +102,14 @@ class AlarmHandler @Inject constructor(
         SlotType.BREAKFAST -> "Вы позавтракали?"
         SlotType.LUNCH -> "Вы пообедали?"
         SlotType.DINNER -> "Вы поужинали?"
-        SlotType.EVENING -> "Был вечерний перекус?"
-        SlotType.SNACK_1, SlotType.SNACK_2 -> "Был перекус?"
-        SlotType.ROAD_BAR -> "Батончик в дороге?"
+        SlotType.SNACK_AM, SlotType.SNACK_PM, SlotType.EVENING -> "Был перекус?"
     }
 
     suspend fun onAction(action: String, slotId: Long, day: Long) {
         when (action) {
-            NotificationActionReceiver.ACTION_EAT -> {
-                notifier.cancelSlot(slotId)
-                meals.eatPlanned(slotId)
-            }
             NotificationActionReceiver.ACTION_SKIP -> {
                 notifier.cancelSlot(slotId)
-                meals.skip(slotId)
+                plans.slot(slotId)?.let { plans.skip(it.day, it.slot) }
             }
             NotificationActionReceiver.ACTION_SNOOZE -> {
                 notifier.cancelSlot(slotId)

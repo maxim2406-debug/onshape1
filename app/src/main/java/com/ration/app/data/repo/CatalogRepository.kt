@@ -50,6 +50,15 @@ class CatalogRepository @Inject constructor(
         ps.map { FoodEntry.of(it, it.id in inStock) } + fs.map { FoodEntry.of(it) }
     }
 
+    /** Отдельные блюда для списка «Собрать из продуктов» (19.4): одинаковые компоненты разных блоков — один раз. */
+    val dishEntries: Flow<List<FoodEntry>> = combine(db.dishes().observeAll(), db.stock().observeAll(), db.preps().observeActive()) { ds, st, preps ->
+        val inStock = st.filter { it.qty > 1e-6 }.map { it.productId }.toSet()
+        val prepKeys = preps.map { it.outputKey }.toSet()
+        com.ration.app.domain.meal.DishSplitter.distinctForList(ds).map { d ->
+            FoodEntry.of(d, (d.productId != null && d.productId in inStock) || (d.prepKey != null && d.prepKey in prepKeys))
+        }
+    }
+
     private val lock = Mutex()
     @Volatile private var cookbookCache: CookbookFile? = null
 
@@ -59,7 +68,8 @@ class CatalogRepository @Inject constructor(
         if (db.products().count() == 0) {
             db.withTransaction {
                 db.products().insertAll(seed.products)
-                db.blocks().insertAll(seed.blocks)
+                // 19.4: исходные блоки скрыты, вместо них — отдельные блюда
+                db.blocks().insertAll(seed.blocks.map { it.copy(hidden = !it.custom) })
                 db.blocks().insertIngredients(seed.ingredients)
                 db.preps().insertTemplates(seed.templates)
             }
@@ -75,6 +85,7 @@ class CatalogRepository @Inject constructor(
             }
         }
         syncCookbook()
+        ensureDishes()
         if (!settings.current().seeded) settings.update { it.copy(seeded = true) }
     }
 
@@ -99,6 +110,23 @@ class CatalogRepository @Inject constructor(
         settings.setFlag("cookbook_version", "0")
         syncCookbook()
     }
+
+    /**
+     * Разбиение блоков на отдельные блюда (19.4): при каждом запуске, идемпотентно —
+     * INSERT OR IGNORE по ключу (legacyBlockId, componentIndex), повторный запуск дубликатов не создаёт.
+     */
+    suspend fun ensureDishes() {
+        val cat = com.ration.app.domain.meal.FoodCatalog(
+            db.products().getAll().associateBy { it.id }, emptyMap(),
+            db.preps().templates().flatMap { it.outputs }.associateBy { it.key },
+        )
+        val dishes = com.ration.app.domain.meal.DishSplitter.split(db.blocks().getAll(), db.blocks().allIngredients().groupBy { it.blockId }, cat)
+        if (dishes.isNotEmpty()) db.dishes().insertIgnore(dishes)
+    }
+
+    val dishes: Flow<List<com.ration.app.data.db.entity.Dish>> = db.dishes().observeAll()
+    suspend fun dish(id: Long) = db.dishes().get(id)
+    suspend fun allDishes() = db.dishes().getAll()
 
     suspend fun allProducts() = db.products().getAll()
     suspend fun allBlocks() = db.blocks().getAll()

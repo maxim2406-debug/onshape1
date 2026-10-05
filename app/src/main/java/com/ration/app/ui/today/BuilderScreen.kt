@@ -13,6 +13,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.AssistChip
@@ -63,6 +64,7 @@ import com.ration.app.domain.library.LibraryParser
 import com.ration.app.domain.meal.CustomBlocks
 import com.ration.app.domain.meal.FoodCatalog
 import com.ration.app.domain.meal.MealItems
+import com.ration.app.domain.meal.ofDish
 import com.ration.app.domain.model.AppSettings
 import com.ration.app.domain.model.CookSlot
 import com.ration.app.domain.model.FoodRole
@@ -104,6 +106,10 @@ data class BuilderUi(
     val saveAsBlock: Boolean = false,
     val warnings: List<String> = emptyList(),
     val title: String = "",
+    /** «Изменить» записанный приём (19.2): сохранение заменяет записи слота. */
+    val edit: Boolean = false,
+    /** Свои блоки M… — вкладка «Мои сеты» (19.4). */
+    val sets: List<Block> = emptyList(),
 )
 
 @HiltViewModel
@@ -120,7 +126,9 @@ class BuilderViewModel @Inject constructor(
 ) : ViewModel() {
     private val slotId: Long = savedState["slotId"] ?: 0L
     private val blockId: Long = savedState["blockId"] ?: 0L
+    private val edit: Boolean = savedState["edit"] ?: false
     val ui = MutableStateFlow(BuilderUi())
+    private var dishes: Map<Long, com.ration.app.data.db.entity.Dish> = emptyMap()
     private lateinit var cat: FoodCatalog
     private var todayLogs: List<MealLog> = emptyList()
     private var week = WeekCounters()
@@ -138,14 +146,28 @@ class BuilderViewModel @Inject constructor(
             drafts.builderTitle = null
             todayLogs = meals.logsRange(day, day)
             week = plans.weekCounters(day, includeDay = true)
-            val slotBlock = slot?.blockId?.let { catalog.block(it) }
+            dishes = catalog.allDishes().associateBy { it.id }
+            // «Изменить»: записанный состав слота; старые записи без состава — строкой с ккал и белком записи
+            val slotLogs = if (edit && slot != null) meals.logsForSlot(day, slot.slot) else emptyList()
+            val editItems = slotLogs.flatMap { l ->
+                l.items.filter { !it.untracked || it.qty > 0 }.map { it.copy(deducted = 0.0) }.ifEmpty {
+                    listOf(MealItem(name = l.name, qty = 1.0, unit = MeasureUnit.PCS, grams = 0.0, kcal = l.kcal - if (l.withFruit) settingsRepo.current().fruitKcal else 0,
+                        protein = l.protein, tags = l.tags))
+                }
+            }
+            // остаток дня без записей этого слота (они заменятся)
+            val otherLogs = todayLogs.filter { it.id !in slotLogs.map { l -> l.id }.toSet() }
+            val now = LocalDateTime.now(clock).let { it.hour * 60 + it.minute }
+            val (tk, tp) = if (slot != null) plans.targetsFor(day, now) else (null to null)
             ui.value = BuilderUi(
                 loaded = true, slot = slot, block = block, original = original,
-                items = draft ?: original ?: emptyList(), withFruit = slot?.slot == SlotType.LUNCH,
-                eatenKcal = todayLogs.sumOf { it.kcal }, eatenProtein = todayLogs.sumOf { it.protein },
-                slotKcal = slotBlock?.kcal?.times(slot?.multiplier ?: 1.0), slotProtein = slotBlock?.protein?.times(slot?.multiplier ?: 1.0),
-                settings = settingsRepo.current(), preps = inventory.activePrepsList(), title = title,
+                items = draft ?: original ?: editItems, withFruit = if (edit) slotLogs.any { it.withFruit } else slot?.slot == SlotType.LUNCH,
+                eatenKcal = otherLogs.sumOf { it.kcal }, eatenProtein = otherLogs.sumOf { it.protein },
+                slotKcal = tk, slotProtein = tp,
+                settings = settingsRepo.current(), preps = inventory.activePrepsList(), title = title, edit = edit && slotLogs.isNotEmpty(),
+                sets = catalog.allBlocks().filter { it.custom && it.active && !it.hidden },
             )
+            todayLogs = otherLogs
             refreshWarnings()
         }
     }
@@ -176,6 +198,10 @@ class BuilderViewModel @Inject constructor(
     }
 
     fun add(e: FoodEntry, qty: Double? = null) = viewModelScope.launch {
+        e.dish?.let { d ->
+            MealItems.ofDish(d, qty ?: d.qty, cat)?.let { update(ui.value.items + it) }
+            return@launch
+        }
         val item = when {
             e.productId != null -> {
                 val p = cat.products[e.productId] ?: catalog.product(e.productId) ?: return@launch
@@ -192,6 +218,11 @@ class BuilderViewModel @Inject constructor(
         update(ui.value.items + item)
     }
 
+    /** «Мои сеты»: состав своего блока добавляется отдельными строками. */
+    fun addSet(b: Block) = viewModelScope.launch {
+        update(ui.value.items + MealItems.ofBlock(catalog.ingredientsOf(b.id), cat).filter { !it.untracked || it.qty > 0 })
+    }
+
     fun addPrep(p: Prep) {
         val unit = if (p.portionGrams != null) MeasureUnit.G else MeasureUnit.PCS
         MealItems.ofPrep(p.outputKey, p.portionGrams ?: 1.0, unit, cat)?.let { update(ui.value.items + it) }
@@ -200,6 +231,8 @@ class BuilderViewModel @Inject constructor(
     fun setQty(i: Int, qty: Double) {
         val it0 = ui.value.items.getOrNull(i) ?: return
         val updated = when {
+            it0.dishId != null && it0.productId == null && it0.prepKey == null -> dishes[it0.dishId]?.let { MealItems.ofDish(it, qty, cat) }
+                ?: it0.copy(qty = qty, kcal = if (it0.qty > 0) it0.kcal / it0.qty * qty else it0.kcal, protein = if (it0.qty > 0) it0.protein / it0.qty * qty else it0.protein)
             it0.prepKey != null -> MealItems.ofPrep(it0.prepKey, qty, it0.unit, cat)
             it0.customFoodId != null -> cat.customFoods[it0.customFoodId]?.let { MealItems.ofCustom(it, qty) }
             it0.productId != null -> cat.products[it0.productId]?.let { MealItems.ofProduct(it, qty, it0.unit) }
@@ -219,6 +252,10 @@ class BuilderViewModel @Inject constructor(
 
     fun replace(i: Int, e: FoodEntry) = viewModelScope.launch {
         val old = ui.value.items.getOrNull(i) ?: return@launch
+        e.dish?.let { d ->
+            MealItems.ofDish(d, d.qty, cat)?.let { item -> update(ui.value.items.toMutableList().also { it[i] = item }) }
+            return@launch
+        }
         val p = e.productId?.let { cat.products[it] ?: catalog.product(it) }
         val item = when {
             p != null -> MealItems.ofProduct(p, UnitConvQty.convert(old, p), p.unit)
@@ -238,9 +275,11 @@ class BuilderViewModel @Inject constructor(
         val tracked = u.items.filter { !(it.untracked && it.qty <= 0) }
         if (tracked.isEmpty()) return@launch
         val day = u.slot?.day ?: plans.today()
-        val out = meals.logItems(day, u.slot?.slot, u.title.ifBlank { tracked.joinToString(" + ") { it.name.substringBefore(',') }.take(80) },
-            u.items, basedOn = u.block, originalItems = u.original, multiplier = u.slot?.multiplier ?: 1.0, withFruit = u.withFruit)
-        ui.value = u.copy(done = out.message() ?: "Записано", saveAsBlock = u.block == null)
+        val name = u.title.ifBlank { tracked.joinToString(" + ") { it.name.substringBefore(',') }.take(80) }
+        val slot = u.slot
+        val out = if (u.edit && slot != null) meals.replaceSlot(day, slot.slot, name, u.items, u.withFruit)
+        else meals.logItems(day, slot?.slot, name, u.items, basedOn = u.block, originalItems = u.original, withFruit = u.withFruit)
+        ui.value = u.copy(done = out.message() ?: "Записано", saveAsBlock = u.block == null && !u.edit)
     }
 
     fun saveAsBlock(name: String, kind: MealKind, tags: List<String>) = viewModelScope.launch {
@@ -275,7 +314,29 @@ fun BuilderScreen(nav: NavController, vm: BuilderViewModel = hiltViewModel()) {
     val remainKcal = s.kcalTarget - u.eatenKcal
     val remainProtein = s.proteinTarget - u.eatenProtein
 
-    Scaffold(topBar = { BackTopBar(if (u.block != null) "Состав: ${u.block!!.code}" else "Собрать из продуктов", { nav.popBackStack() }) }) { pad ->
+    var menu by remember { mutableStateOf(false) }
+    var setsOpen by remember { mutableStateOf(false) }
+    val slotTitle = u.slot?.let { "${it.slot.title} ${TimeUtil.hm(it.minuteOfDay)}" }
+    val title = when {
+        u.block != null -> "Состав: ${u.block!!.code}"
+        u.edit && slotTitle != null -> "Изменить: $slotTitle"
+        slotTitle != null -> slotTitle
+        else -> "Собрать из продуктов"
+    }
+    Scaffold(topBar = {
+        BackTopBar(title, { nav.popBackStack() }) {
+            androidx.compose.foundation.layout.Box {
+                IconButton(onClick = { menu = true }) { Icon(Icons.Filled.MoreVert, "Меню") }
+                androidx.compose.material3.DropdownMenu(menu, { menu = false }) {
+                    // 19.4: «Что приготовить» доступен только отсюда (и из уведомления о нехватке белка)
+                    androidx.compose.material3.DropdownMenuItem(text = { Text("Что приготовить") }, onClick = {
+                        menu = false
+                        nav.navigate("cook" + (u.slot?.let { "?slot=${it.slot.name}" } ?: ""))
+                    })
+                }
+            }
+        }
+    }) { pad ->
         Column(Modifier.fillMaxSize().padding(pad)) {
             LazyColumn(Modifier.weight(1f).padding(horizontal = 16.dp)) {
                 item {
@@ -292,7 +353,7 @@ fun BuilderScreen(nav: NavController, vm: BuilderViewModel = hiltViewModel()) {
                 itemsIndexed(u.items) { i, item -> ItemRow(item, u.settings, u.loaded && vm.isVeg(item), onQty = { vm.setQty(i, it) }, onGrams = { vm.setGrams(i, it) }, onRemove = { vm.remove(i) }, onReplace = { replacing = i }) }
                 item {
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(vertical = 8.dp)) {
-                        Button(onClick = { picking = true }) { Text("+ Продукт") }
+                        Button(onClick = { picking = true }) { Text("+ Продукт или блюдо") }
                         if (u.preps.isNotEmpty()) Column {
                             OutlinedButton(onClick = { prepMenu = true }) { Text("+ Заготовка") }
                             androidx.compose.material3.DropdownMenu(prepMenu, { prepMenu = false }) {
@@ -300,6 +361,12 @@ fun BuilderScreen(nav: NavController, vm: BuilderViewModel = hiltViewModel()) {
                                     androidx.compose.material3.DropdownMenuItem(text = { Text(p.name) }, onClick = { prepMenu = false; vm.addPrep(p) })
                                 }
                             }
+                        }
+                    }
+                    if (u.sets.isNotEmpty()) {
+                        TextButton(onClick = { setsOpen = !setsOpen }) { Text((if (setsOpen) "▾ " else "▸ ") + "Мои сеты (${u.sets.size})") }
+                        if (setsOpen) FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            u.sets.forEach { b -> AssistChip(onClick = { vm.addSet(b) }, label = { Text("${b.code} ${b.name}") }) }
                         }
                     }
                     if (u.slot?.slot == SlotType.LUNCH || u.withFruit) Row(verticalAlignment = Alignment.CenterVertically) {
@@ -313,7 +380,7 @@ fun BuilderScreen(nav: NavController, vm: BuilderViewModel = hiltViewModel()) {
             Card(Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer)) {
                 Column(Modifier.padding(12.dp)) {
                     Text("Итог: ${Math.round(kcal)} ккал · ${Math.round(protein)} г белка", fontWeight = FontWeight.Bold)
-                    u.slotKcal?.let { sk -> Text("План слота: ${Math.round(sk)} ккал · ${Math.round(u.slotProtein ?: 0.0)} г (разница ${signed(kcal - sk)} ккал)", style = MaterialTheme.typography.bodySmall) }
+                    u.slotKcal?.let { sk -> Text("Цель приёма: ${Math.round(sk)} ккал · ${Math.round(u.slotProtein ?: 0.0)} г (разница ${signed(kcal - sk)} ккал)", style = MaterialTheme.typography.bodySmall) }
                     Text("Остаток дня до записи: ${Math.round(remainKcal)} ккал · ${Math.round(remainProtein)} г; после: ${Math.round(remainKcal - kcal)} ккал · ${Math.round(remainProtein - protein)} г",
                         style = MaterialTheme.typography.bodySmall)
                     Button(onClick = vm::save, enabled = u.loaded && u.items.any { !it.untracked || it.qty > 0 }, modifier = Modifier.fillMaxWidth().padding(top = 8.dp)) { Text("Записать") }
@@ -321,8 +388,8 @@ fun BuilderScreen(nav: NavController, vm: BuilderViewModel = hiltViewModel()) {
             }
         }
     }
-    if (picking) FoodPickerDialog("Добавить продукт", onDismiss = { picking = false }) { e -> picking = false; vm.add(e) }
-    replacing?.let { i -> FoodPickerDialog("Заменить на", onDismiss = { replacing = null }) { e -> replacing = null; vm.replace(i, e) } }
+    if (picking) FoodPickerDialog("Продукт или блюдо", onDismiss = { picking = false }, includeDishes = true) { e -> picking = false; vm.add(e) }
+    replacing?.let { i -> FoodPickerDialog("Заменить на", onDismiss = { replacing = null }, includeDishes = true) { e -> replacing = null; vm.replace(i, e) } }
 
     if (u.saveAsBlock) SaveBlockDialog(u, vm)
     else u.done?.let { msg ->
