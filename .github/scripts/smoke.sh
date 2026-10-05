@@ -69,6 +69,7 @@ $UI hasnot "Тип дня" || exit 1
 $UI hasnot "Съел по плану" || exit 1
 $UI hasnot "В пути" || exit 1
 $UI hasnot "Что приготовить" || exit 1
+$UI top
 $UI has "Вода +250 мл" || exit 1
 $UI has "Свой продукт" || exit 1
 
