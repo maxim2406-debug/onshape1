@@ -30,13 +30,15 @@ import java.io.File
 class MigrationTest {
     private val name = "migration-test.db"
     private val context: Context get() = InstrumentationRegistry.getInstrumentation().targetContext
+    /** Отдельная папка: настоящие копии приложения (files/backup) тест не трогает. */
+    private val dir: File get() = File(context.cacheDir, "migration-test-backup")
 
     @get:Rule
     val helper = MigrationTestHelper(InstrumentationRegistry.getInstrumentation(), AppDatabase::class.java)
 
     @After fun cleanup() {
         context.deleteDatabase(name)
-        File(context.filesDir, "backup").deleteRecursively()
+        dir.deleteRecursively()
     }
 
     private val day = 20_400L
@@ -90,8 +92,8 @@ class MigrationTest {
         helper.createDatabase(name, 2).use { seedV2(it) }
 
         // 19.6: копия файла перед миграцией
-        PreMigrationBackup.run(context, name, AppDatabase.VERSION)
-        assertTrue(File(context.filesDir, "backup/pre-migration-2.db").exists())
+        PreMigrationBackup.run(context, name, AppDatabase.VERSION, dir)
+        assertTrue(File(dir, "pre-migration-2.db").exists())
 
         val db = helper.runMigrationsAndValidate(name, 3, true, AppDatabase.MIGRATION_2_3)
         assertEquals(2L, count(db, "SELECT COUNT(*) FROM product"))
@@ -139,13 +141,13 @@ class MigrationTest {
         runBlocking { assertEquals(4, again.meals().getAll().size); assertEquals(1, again.dishes().getAll().size) }
         again.close()
         // копия перед миграцией делается, только если версия файла меньше текущей
-        File(context.filesDir, "backup").deleteRecursively()
-        PreMigrationBackup.run(context, name, AppDatabase.VERSION)
-        assertTrue(!File(context.filesDir, "backup/pre-migration-3.db").exists())
+        dir.deleteRecursively()
+        PreMigrationBackup.run(context, name, AppDatabase.VERSION, dir)
+        assertTrue(!File(dir, "pre-migration-3.db").exists())
     }
 
     @Test fun keepsLastTwoCopies() {
-        val dir = File(context.filesDir, "backup").apply { mkdirs() }
+        dir.mkdirs()
         listOf(1, 2, 3).forEachIndexed { i, v ->
             File(dir, "pre-migration-$v.db").apply { writeText("x"); setLastModified(1_000_000L + i * 1000) }
         }

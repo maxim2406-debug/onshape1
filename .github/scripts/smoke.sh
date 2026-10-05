@@ -37,6 +37,9 @@ if crashed; then echo "Падение при запуске"; grep -A30 "FATAL E
 if [ -n "$OLD_DIR" ]; then
   VER=$(adb shell dumpsys package "$PKG" | grep -m1 versionName | tr -d '\r ')
   echo "Установлено: $VER"
+  # 19.6: копия базы перед миграцией в приватной папке приложения
+  adb shell run-as "$PKG" ls files/backup | tee backup-ls.txt
+  grep -q "pre-migration-2.db" backup-ls.txt || { echo "Нет копии базы перед миграцией"; exit 1; }
 fi
 
 for route in today tomorrow shopping preps prep_checklist week health import library cook inventory; do

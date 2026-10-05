@@ -24,12 +24,12 @@ object PreMigrationBackup {
         }
     }.getOrNull()
 
-    fun run(context: Context, name: String, currentVersion: Int) {
+    fun run(context: Context, name: String, currentVersion: Int, backupDir: File = File(context.filesDir, "backup")) {
         runCatching {
             val db = context.getDatabasePath(name)
             val version = storedVersion(db) ?: return
             if (version <= 0 || version >= currentVersion) return
-            val dir = File(context.filesDir, "backup").apply { mkdirs() }
+            val dir = backupDir.apply { mkdirs() }
             val target = File(dir, "pre-migration-$version.db")
             db.copyTo(target, overwrite = true)
             listOf("-wal", "-shm").forEach { suffix ->
