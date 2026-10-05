@@ -42,7 +42,7 @@ if [ -n "$OLD_DIR" ]; then
   grep -q "pre-migration-2.db" backup-ls.txt || { echo "Нет копии базы перед миграцией"; exit 1; }
 fi
 
-for route in today tomorrow shopping preps prep_checklist week health import library cook inventory; do
+for route in today tomorrow shopping preps prep_checklist week health import library cook inventory nutrition; do
   echo "== экран $route"
   adb shell am start -W -n "$ACT" --es route "$route" > /dev/null
   sleep 5
@@ -95,6 +95,10 @@ $UI tapnear "У · Ужин" "Собрать из продуктов" || exit 1;
 $UI tap "Меню" || exit 1; step "меню конструктора"
 $UI tap "Что приготовить" || exit 1; step "Что приготовить из конструктора"
 sleep 3; step "подбор вариантов"
+# статистика калорий и белка по записанным приёмам
+adb shell am start -W -n "$ACT" --es route nutrition > /dev/null; sleep 4; step "статистика питания"
+$UI has "Средние за день" || exit 1
+$UI has "Ккал по дням" || exit 1
 
 # Нижняя навигация: вкладки открываются через маршруты today/… выше; проверяем ещё возврат и повторный запуск
 adb shell input keyevent KEYCODE_BACK; sleep 2

@@ -146,6 +146,7 @@ fun AppRoot(activity: MainActivity) {
             composable("block/{id}", arguments = listOf(navArgument("id") { type = NavType.LongType })) {
                 BlockDetailScreen(nav, it.arguments?.getLong("id") ?: 0)
             }
+            composable("nutrition") { com.ration.app.ui.health.NutritionScreen(nav) }
             composable("library") { com.ration.app.ui.library.LibraryScreen(nav) }
             composable(
                 "cook?slot={slot}",

@@ -60,6 +60,6 @@ class MainActivity : FragmentActivity() {
     companion object {
         const val EXTRA_ROUTE = "route"
         const val EXTRA_SLOT_ID = "slotId"
-        private val ROUTE_WHITELIST = setOf("today", "tomorrow", "shopping", "preps", "prep_checklist", "health", "week", "import", "inventory", "library", "cook")
+        private val ROUTE_WHITELIST = setOf("today", "tomorrow", "shopping", "preps", "prep_checklist", "health", "week", "import", "inventory", "library", "cook", "nutrition")
     }
 }

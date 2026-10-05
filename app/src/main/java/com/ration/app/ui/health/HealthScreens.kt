@@ -191,7 +191,10 @@ fun HealthScreen(nav: NavController, activity: MainActivity, vm: HealthViewModel
     var dia by remember { mutableStateOf("") }
     var pulse by remember { mutableStateOf("") }
     val zone = java.time.ZoneId.systemDefault()
-    Scaffold(topBar = { BackTopBar("Вес и давление", { nav.popBackStack() }) { TextButton(onClick = { nav.navigate("report") }) { Text("Отчёт") } } },
+    Scaffold(topBar = { BackTopBar("Вес и давление", { nav.popBackStack() }) {
+        TextButton(onClick = { nav.navigate("nutrition") }) { Text("Питание") }
+        TextButton(onClick = { nav.navigate("report") }) { Text("Отчёт") }
+    } },
         snackbarHost = { SnackbarHost(snackbar) }) { pad ->
         LazyColumn(Modifier.fillMaxSize().padding(pad).padding(horizontal = 16.dp)) {
             item {
