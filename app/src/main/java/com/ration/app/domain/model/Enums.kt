@@ -187,3 +187,18 @@ enum class CookSlot(val letter: String, val label: String) {
         fun ofLetter(l: String): CookSlot? = entries.firstOrNull { it.letter == l }
     }
 }
+
+/** Тренировки (20.2). */
+@Serializable
+enum class WorkoutType(val label: String) { SWIM("Бассейн"), WALK("Ходьба на дорожке") }
+
+/** Откуда ккал тренировки: расчёт по формуле или ввод с часов/тренажёра (активные или общие). */
+@Serializable
+enum class KcalSource(val label: String) { CALC("расчёт"), INPUT_ACTIVE("введено, активные"), INPUT_TOTAL("введено, общие") }
+
+@Serializable
+enum class DocType(val label: String) { LAB("анализ"), DOCTOR("заключение врача"), OTHER("другое") }
+
+/** Пол для формулы Миффлина–Сан-Жеора. */
+@Serializable
+enum class Sex(val label: String) { M("мужской"), F("женский") }

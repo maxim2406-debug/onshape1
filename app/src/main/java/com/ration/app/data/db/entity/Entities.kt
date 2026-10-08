@@ -5,6 +5,9 @@ import androidx.room.Index
 import androidx.room.PrimaryKey
 import com.ration.app.domain.model.CookMethod
 import com.ration.app.domain.model.CookState
+import com.ration.app.domain.model.DocType
+import com.ration.app.domain.model.KcalSource
+import com.ration.app.domain.model.WorkoutType
 import com.ration.app.domain.model.DayType
 import com.ration.app.domain.model.FoodRole
 import com.ration.app.domain.model.ProductSource
@@ -362,6 +365,71 @@ data class BpLog(
     val systolic: Int,
     val diastolic: Int,
     val pulse: Int? = null,
+)
+
+/** Тренировка (20.2). [kcalNet] — чистые (активные) ккал, они и идут в баланс. */
+@Serializable
+@Entity(tableName = "workout", indices = [Index("day")])
+data class Workout(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val type: WorkoutType,
+    val day: Long,
+    val startMillis: Long,
+    val durationMin: Double,
+    /** Бассейн: метры; дорожка: метры (вычисляется из скорости и времени, если не введено). */
+    val distanceM: Double? = null,
+    val inclinePct: Double? = null,
+    val speedKmh: Double? = null,
+    /** Как получены ккал: расчёт или ввод (активные / общие). */
+    val kcalSource: KcalSource,
+    /** Введённые или рассчитанные ккал до перевода в чистые. */
+    val kcalEntered: Double,
+    val kcalNet: Double,
+    val note: String = "",
+)
+
+/** Показатель анализа (20.4). [source]: manual / import. */
+@Serializable
+@Entity(tableName = "lab_result", indices = [Index("day"), Index("indicator")])
+data class LabResult(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val day: Long,
+    val indicator: String,
+    val value: Double,
+    val unit: String = "",
+    val refLow: Double? = null,
+    val refHigh: Double? = null,
+    val documentId: Long? = null,
+    val source: String = "manual",
+)
+
+/** Документ (анализ, заключение). Сам файл — зашифрованный в files/docs/[fileName]. */
+@Serializable
+@Entity(tableName = "health_document", indices = [Index("day")])
+data class HealthDocument(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val day: Long,
+    val type: DocType,
+    val title: String,
+    val issuer: String = "",
+    val note: String = "",
+    val fileName: String,
+    val mime: String,
+    val sizeBytes: Long,
+    val createdAt: Long,
+)
+
+/** Кэш дневного расчёта формы (20.3). Можно пересоздать в любой момент из журналов. */
+@Serializable
+@Entity(tableName = "form_daily")
+data class FormDaily(
+    @PrimaryKey val day: Long,
+    val bmr: Double,
+    val baseKcal: Double,
+    val workoutKcal: Double,
+    val intakeKcal: Double,
+    val hasFood: Boolean,
+    val computedAt: Long,
 )
 
 /** Ингредиент рецепта: ссылка по роли («protein:fish_white») или жёсткая («product:salmon»). */

@@ -1,0 +1,48 @@
+{
+  "version": 1,
+  "bp": {
+    "normalSys": 130, "normalDia": 85,
+    "highSys": 140, "highDia": 90,
+    "repeatHighCount": 2,
+    "urgentSys": 180, "urgentDia": 120
+  },
+  "trend": {
+    "weightNoiseKg": 0.3,
+    "weightFastLossPctWeek": 1.0,
+    "bpSysNoise": 3, "bpDiaNoise": 2,
+    "activityDropPct": 20,
+    "proteinDropPct": 10,
+    "intakeFloorKcal": 1500,
+    "labChangePct": 5,
+    "minMeasurements": 3,
+    "minFoodDays": 3,
+    "dismissDays": 3,
+    "notifyEveryDays": 3
+  },
+  "nutrition": {
+    "processedSaltyYellowPct": 20,
+    "processedSaltyRedPct": 35,
+    "fishPerWeekMin": 2
+  },
+  "activity": { "greenMinWeek": 150, "yellowMinWeek": 60 },
+  "indicators": [
+    { "key": "alt", "name": "АЛТ", "aliases": ["ALT", "АлАТ", "GPT"], "unit": "Ед/л", "refLow": 0, "refHigh": 41, "worse": "up" },
+    { "key": "ast", "name": "АСТ", "aliases": ["AST", "АсАТ", "GOT"], "unit": "Ед/л", "refLow": 0, "refHigh": 40, "worse": "up" },
+    { "key": "ggt", "name": "ГГТ", "aliases": ["GGT", "ГГТП"], "unit": "Ед/л", "refLow": 8, "refHigh": 61, "worse": "up" },
+    { "key": "chol", "name": "Общий холестерин", "aliases": ["Холестерин", "Cholesterol"], "unit": "мг/дл", "refLow": null, "refHigh": 200, "worse": "up" },
+    { "key": "ldl", "name": "ЛПНП", "aliases": ["LDL"], "unit": "мг/дл", "refLow": null, "refHigh": 130, "worse": "up" },
+    { "key": "hdl", "name": "ЛПВП", "aliases": ["HDL"], "unit": "мг/дл", "refLow": 40, "refHigh": null, "worse": "down" },
+    { "key": "tg", "name": "Триглицериды", "aliases": ["Triglycerides", "ТГ"], "unit": "мг/дл", "refLow": null, "refHigh": 150, "worse": "up" },
+    { "key": "glucose", "name": "Глюкоза натощак", "aliases": ["Глюкоза", "Glucose"], "unit": "мг/дл", "refLow": 70, "refHigh": 100, "worse": "up", "criticalLow": 50, "criticalHigh": 400 },
+    { "key": "hba1c", "name": "HbA1c", "aliases": ["Гликированный гемоглобин"], "unit": "%", "refLow": 4.0, "refHigh": 5.7, "worse": "up" },
+    { "key": "creatinine", "name": "Креатинин", "aliases": ["Creatinine"], "unit": "мг/дл", "refLow": 0.7, "refHigh": 1.3, "worse": "up" },
+    { "key": "k", "name": "Калий", "aliases": ["K", "Potassium"], "unit": "ммоль/л", "refLow": 3.5, "refHigh": 5.1, "worse": "range", "criticalLow": 2.8, "criticalHigh": 6.2 },
+    { "key": "na", "name": "Натрий", "aliases": ["Na", "Sodium"], "unit": "ммоль/л", "refLow": 136, "refHigh": 145, "worse": "range", "criticalLow": 120, "criticalHigh": 160 },
+    { "key": "uric", "name": "Мочевая кислота", "aliases": ["Uric acid"], "unit": "мг/дл", "refLow": 3.5, "refHigh": 7.2, "worse": "up" },
+    { "key": "tsh", "name": "ТТГ", "aliases": ["TSH"], "unit": "мМЕ/л", "refLow": 0.4, "refHigh": 4.0, "worse": "range" },
+    { "key": "vitd", "name": "Витамин D", "aliases": ["25(OH)D", "Vitamin D"], "unit": "нг/мл", "refLow": 30, "refHigh": 100, "worse": "down" },
+    { "key": "b12", "name": "B12", "aliases": ["Витамин B12", "Vitamin B12"], "unit": "пг/мл", "refLow": 200, "refHigh": 900, "worse": "down" },
+    { "key": "mg", "name": "Магний", "aliases": ["Mg", "Magnesium"], "unit": "мг/дл", "refLow": 1.7, "refHigh": 2.4, "worse": "range" },
+    { "key": "hb", "name": "Гемоглобин", "aliases": ["Hb", "Hemoglobin", "HGB"], "unit": "г/дл", "refLow": 13.5, "refHigh": 17.5, "worse": "down", "criticalLow": 7.0, "criticalHigh": 20.0 }
+  ]
+}

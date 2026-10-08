@@ -84,6 +84,19 @@ data class AppSettings(
     val startWeightKg: Double = 95.0,
     val weightLossGoalKg: Double = 15.0,
     val heightCm: Int = 179,
+    /** Профиль для расчётов формы (20.1). */
+    val sex: Sex = Sex.M,
+    val ageYears: Int = 41,
+    /** Целевой вес; null — стартовый вес минус цель снижения (95 − 15). */
+    val targetWeightKg: Double? = null,
+    /** Коэффициент активности вне тренировок (1,2–1,5). */
+    val pal: Double = 1.3,
+    /** Желаемый темп снижения, кг в неделю. */
+    val lossPaceKgPerWeek: Double = 0.5,
+    /** Скрытые предупреждения о здоровье: ключ → до какого дня (epochDay) не показывать (20.6). */
+    val healthWarningsDismissed: Map<String, Long> = emptyMap(),
+    /** День последнего уведомления о предупреждениях здоровья (не чаще раза в 3 дня). */
+    val healthWarnNotifiedDay: Long? = null,
 
     val claudeApiEnabled: Boolean = false,
     val claudeModel: String = "claude-opus-5-5",
@@ -97,6 +110,8 @@ data class AppSettings(
     val hiddenSuggestions: List<String> = emptyList(),
     val seeded: Boolean = false,
 ) {
+    val targetWeight: Double get() = targetWeightKg ?: (startWeightKg - weightLossGoalKg)
+
     /** Действующее расписание шести слотов. */
     fun times(): Map<SlotType, Int> = slotTimes ?: SlotSchedule.fromLegacy(slotTimesB, slotTimesA, DayType.B)
 
