@@ -73,8 +73,11 @@ def tapnear(anchor, button):
 
 def hasnot(text):
     swipe_up(6)
+    first = None
     for attempt in range(6):
         root = dump()
+        if first is None:
+            first = root
         if root is not None and find(root, text, True):
             print(f"найдено лишнее: «{text}»")
             return 1
@@ -96,8 +99,11 @@ def main():
     text = sys.argv[2]
     contains = "--contains" in sys.argv
     index = int(sys.argv[sys.argv.index("--index") + 1]) if "--index" in sys.argv else 0
+    first = None
     for attempt in range(6):
         root = dump()
+        if first is None:
+            first = root
         hits = find(root, text, contains) if root is not None else []
         if len(hits) > index:
             x, y, t = hits[index]
@@ -110,6 +116,9 @@ def main():
         adb("shell", "input", "swipe", "160", "500", "160", "200", "300")
         time.sleep(1)
     print(f"не найдено: «{text}»")
+    if first is not None:
+        texts = [n.get("text") for n in first.iter("node") if n.get("text")]
+        print("первый экран: " + " | ".join(texts[:40]))
     if root is not None:
         texts = [n.get("text") for n in root.iter("node") if n.get("text")]
         print("на экране: " + " | ".join(texts[:40]))

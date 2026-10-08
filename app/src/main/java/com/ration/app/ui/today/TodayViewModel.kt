@@ -79,7 +79,7 @@ class TodayViewModel @Inject constructor(
     val healthWarnings = MutableStateFlow<List<HealthWarning>>(emptyList())
 
     fun refreshHealth() = viewModelScope.launch {
-        formHint.value = runCatching { insights.formHint() }.getOrNull()
+        formHint.value = runCatching { insights.formHint() }.onFailure { android.util.Log.w("Ration", "formHint: ${it.javaClass.simpleName}") }.getOrNull()
         healthWarnings.value = runCatching { insights.visibleWarnings() }.getOrDefault(emptyList())
     }
 
