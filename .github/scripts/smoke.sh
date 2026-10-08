@@ -103,7 +103,7 @@ $UI has "Ккал по дням" || exit 1
 # Раздел 20: «По форме» на «Сегодня» (рекомендация или список недостающего), тренировки, форма, защищённые разделы
 adb shell am start -W -n "$ACT" --es route today > /dev/null; sleep 4; step "Сегодня"
 $UI top
-$UI has "По форме" --contains || $UI has "Для рекомендации не хватает" --contains || {
+$UI has "По форме" --contains || { $UI top; $UI has "Для рекомендации не хватает" --contains; } || {
   echo "нет строки «По форме»"; adb logcat -d | grep -E "Ration|AndroidRuntime|Exception" | tail -40; FAIL=1; }
 adb shell am start -W -n "$ACT" --es route workouts > /dev/null; sleep 4; step "тренировки"
 $UI has "+ Бассейн" || exit 1
