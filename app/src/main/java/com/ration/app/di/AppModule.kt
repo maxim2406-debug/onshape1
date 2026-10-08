@@ -22,7 +22,7 @@ object AppModule {
         // 19.6: копия файла базы до миграции; пересоздание базы (fallbackToDestructiveMigration) не используется
         PreMigrationBackup.run(context, AppDatabase.NAME, AppDatabase.VERSION)
         return Room.databaseBuilder(context, AppDatabase::class.java, AppDatabase.NAME)
-            .addMigrations(AppDatabase.MIGRATION_1_2, AppDatabase.MIGRATION_2_3)
+            .addMigrations(AppDatabase.MIGRATION_1_2, AppDatabase.MIGRATION_2_3, AppDatabase.MIGRATION_3_4)
             .build()
     }
 

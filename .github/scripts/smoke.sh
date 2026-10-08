@@ -37,12 +37,12 @@ if crashed; then echo "Падение при запуске"; grep -A30 "FATAL E
 if [ -n "$OLD_DIR" ]; then
   VER=$(adb shell dumpsys package "$PKG" | grep -m1 versionName | tr -d '\r ')
   echo "Установлено: $VER"
-  # 19.6: копия базы перед миграцией в приватной папке приложения
+  # 19.6, 20.8: копия базы v3 перед миграцией в приватной папке приложения
   adb shell run-as "$PKG" ls files/backup | tee backup-ls.txt
-  grep -q "pre-migration-2.db" backup-ls.txt || { echo "Нет копии базы перед миграцией"; exit 1; }
+  grep -q "pre-migration-3.db" backup-ls.txt || { echo "Нет копии базы перед миграцией"; exit 1; }
 fi
 
-for route in today tomorrow shopping preps prep_checklist week health import library cook inventory nutrition; do
+for route in today tomorrow shopping preps prep_checklist week health import library cook inventory nutrition workouts form; do
   echo "== экран $route"
   adb shell am start -W -n "$ACT" --es route "$route" > /dev/null
   sleep 5
@@ -100,6 +100,25 @@ adb shell am start -W -n "$ACT" --es route nutrition > /dev/null; sleep 4; step 
 $UI has "Средние за день" || exit 1
 $UI has "Ккал по дням" || exit 1
 
+# Раздел 20: «По форме» на «Сегодня» (рекомендация или список недостающего), тренировки, форма, защищённые разделы
+adb shell am start -W -n "$ACT" --es route today > /dev/null; sleep 4; step "Сегодня"
+$UI top
+$UI has "По форме" --contains || $UI has "Для рекомендации не хватает" --contains || { echo "нет строки «По форме»"; exit 1; }
+adb shell am start -W -n "$ACT" --es route workouts > /dev/null; sleep 4; step "тренировки"
+$UI has "+ Бассейн" || exit 1
+$UI tap "+ Бассейн" || exit 1; step "диалог тренировки"
+$UI has "Рассчитать" || exit 1
+adb shell input keyevent KEYCODE_BACK; step "закрытие диалога"
+adb shell am start -W -n "$ACT" --es route form > /dev/null; sleep 4; step "форма"
+$UI has "7 дней" || exit 1
+adb shell am start -W -n "$ACT" --es route condition > /dev/null; sleep 4; step "состояние"
+$UI tap "Открыть без защиты" || true; step "разблокировка раздела"
+$UI has "Карта состояния" || exit 1
+$UI has "Скопировать запрос для Claude" || exit 1
+adb shell am start -W -n "$ACT" --es route documents > /dev/null; sleep 4; step "документы"
+$UI tap "Открыть без защиты" || true; step "разблокировка документов"
+$UI has "+ Документ" || exit 1
+
 # Нижняя навигация: вкладки открываются через маршруты today/… выше; проверяем ещё возврат и повторный запуск
 adb shell input keyevent KEYCODE_BACK; sleep 2
 adb shell am force-stop "$PKG"; sleep 1
@@ -108,7 +127,7 @@ if crashed; then echo "Падение при повторном запуске";
 
 adb logcat -d > smoke-logcat.txt
 
-# Инструментальный тест миграции БД v2 → v3 (MigrationTestHelper, 19.7)
+# Инструментальные тесты: миграции v2 → v3 → v4, шифрование документов (19.7, 20.9)
 TEST_DIR="${3:-}"
 if [ -n "$TEST_DIR" ]; then
   TAPK=$(find "$TEST_DIR" -name "*.apk" | head -1)

@@ -16,8 +16,8 @@ android {
         applicationId = "com.ration.app"
         minSdk = 26
         targetSdk = 36
-        versionCode = 4
-        versionName = "1.2.1"
+        versionCode = 5
+        versionName = "1.3.0"
         // Инструментальный тест миграции БД (19.7): MigrationTestHelper на эмуляторе CI
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }

@@ -115,9 +115,9 @@ jobs:
       - name: Gradle
         uses: gradle/actions/setup-gradle@v4
 
-      - name: Сборка прежней версии 1.1 (БД v2) с тем же debug-ключом
+      - name: Сборка прежней версии 1.2.1 (БД v3) с тем же debug-ключом
         run: |
-          git fetch --depth=1 origin afe7cfe26e366fbf8348050e60aa303bb2992fcc
+          git fetch --depth=1 origin 20c3ccf79f060053eb9a2c7386175533ef16d538
           git worktree add "$RUNNER_TEMP/old" FETCH_HEAD
           cd "$RUNNER_TEMP/old"
           ./gradlew --no-daemon assembleOfflineDebug

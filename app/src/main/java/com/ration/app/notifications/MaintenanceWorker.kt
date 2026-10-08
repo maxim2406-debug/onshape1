@@ -26,12 +26,15 @@ class MaintenanceWorker @AssistedInject constructor(
     private val plans: PlanRepository,
     private val inventory: InventoryRepository,
     private val scheduler: ReminderScheduler,
+    private val insights: com.ration.app.data.repo.HealthInsights,
 ) : CoroutineWorker(context, params) {
     override suspend fun doWork(): Result = try {
         catalog.ensureSeeded()
         plans.ensurePlan(plans.today())
         inventory.checkThresholds()
         scheduler.rescheduleAll()
+        // 20.6: предупреждения о стабильном ухудшении — уведомление не чаще раза в 3 дня
+        runCatching { insights.notifyIfNeeded() }
         // Отчёты для врача живут в кэше не дольше часа.
         java.io.File(applicationContext.cacheDir, "reports").listFiles()
             ?.filter { System.currentTimeMillis() - it.lastModified() > 3_600_000L }?.forEach { it.delete() }

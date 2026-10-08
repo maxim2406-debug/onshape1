@@ -1,5 +1,7 @@
 package com.ration.app.ui.more
 
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -67,12 +69,16 @@ import javax.inject.Inject
 @Composable
 fun MoreScreen(nav: NavController) {
     Scaffold(topBar = { PlainTopBar("Ещё") }) { pad ->
-        Column(Modifier.padding(pad)) {
+        Column(Modifier.padding(pad).verticalScroll(rememberScrollState())) {
             listOf(
                 "tomorrow" to ("Завтра" to "Время приёмов, цели, заготовки, подтверждение"),
                 "week" to ("Неделя" to "Рыба, красное мясо, свободный обед, яйца"),
                 "health" to ("Вес и давление" to "Журналы, графики, отчёт для врача"),
                 "nutrition" to ("Калории и белок" to "Средние, графики по дням, недели, приёмы"),
+                "workouts" to ("Тренировки" to "Бассейн и дорожка, ккал: ввод или расчёт"),
+                "form" to ("Форма" to "Расход, баланс, прогноз, калибровка, рекомендации"),
+                "condition" to ("Состояние" to "Карта по областям, анализы, импорт (под защитой)"),
+                "documents" to ("Документы" to "Бланки анализов и заключения (зашифрованы, под защитой)"),
                 "library" to ("Продукты (библиотека)" to "Поиск, добавление, пакетный ввод, скрытые"),
                 "inventory" to ("Инвентаризация" to "Сверка остатков по списку или фото холодильника"),
                 "blocks" to ("Блоки и рецепты" to "Исходные блоки (справочно), рецепты, мои сеты"),

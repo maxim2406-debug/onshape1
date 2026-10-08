@@ -242,4 +242,24 @@ class Section20Test {
         assertTrue(rules.indicators.all { it.worse in setOf("up", "down", "range") })
         assertEquals(180, rules.bp.urgentSys)
     }
+
+    /** 20.7: документы не экспортируются без пароля; копия старой схемы открывается, новые разделы пустые. */
+    @Test fun backupDocumentsNeedPassword() {
+        val doc = com.ration.app.data.db.entity.HealthDocument(1, today, com.ration.app.domain.model.DocType.LAB, "Анализ", fileName = "x.bin",
+            mime = "application/pdf", sizeBytes = 3, createdAt = 0)
+        val data = com.ration.app.domain.backup.BackupData(documents = listOf(com.ration.app.domain.backup.DocumentBlob(doc, "AAAA")),
+            workouts = listOf(workout(today, 300.0)), labResults = listOf(LabResult(7, today, "АЛТ", 30.0)))
+        assertTrue(runCatching { com.ration.app.domain.backup.BackupCodec.encode(data, null) }.isFailure)
+        val enc = com.ration.app.domain.backup.BackupCodec.encode(data, "пароль-123".toCharArray())
+        val back = com.ration.app.domain.backup.BackupCodec.decode(enc, "пароль-123".toCharArray())
+        assertEquals(1, back.documents.size); assertEquals(1, back.workouts.size); assertEquals(1, back.labResults.size)
+        // без документов — экспорт без пароля работает
+        val plain = com.ration.app.domain.backup.BackupCodec.encode(data.copy(documents = emptyList()), null)
+        assertEquals(1, com.ration.app.domain.backup.BackupCodec.decode(plain, null).workouts.size)
+        // файл прежней схемы без новых разделов открывается, разделы пустые
+        val old = com.ration.app.domain.backup.BackupCodec.encode(com.ration.app.domain.backup.BackupData(schemaVersion = 3), null)
+            .replace("\"schemaVersion\":4", "\"schemaVersion\":3")
+        val o = com.ration.app.domain.backup.BackupCodec.decode(old, null)
+        assertTrue(o.workouts.isEmpty() && o.labResults.isEmpty() && o.documents.isEmpty())
+    }
 }

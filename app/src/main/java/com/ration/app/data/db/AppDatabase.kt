@@ -5,6 +5,7 @@ import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
 import com.ration.app.data.db.dao.BlockDao
 import com.ration.app.data.db.dao.DishDao
+import com.ration.app.data.db.dao.Health2Dao
 import com.ration.app.data.db.dao.SlotStateDao
 import com.ration.app.data.db.dao.HealthDao
 import com.ration.app.data.db.dao.MaintenanceDao
@@ -22,6 +23,10 @@ import com.ration.app.data.db.entity.BpLog
 import com.ration.app.data.db.entity.CustomFood
 import com.ration.app.data.db.entity.DayPlan
 import com.ration.app.data.db.entity.Dish
+import com.ration.app.data.db.entity.FormDaily
+import com.ration.app.data.db.entity.HealthDocument
+import com.ration.app.data.db.entity.LabResult
+import com.ration.app.data.db.entity.Workout
 import com.ration.app.data.db.entity.SlotState
 import com.ration.app.data.db.entity.MealLog
 import com.ration.app.data.db.entity.PlannedSlot
@@ -41,8 +46,9 @@ import com.ration.app.data.db.entity.WeightLog
         Product::class, StockItem::class, Purchase::class, PurchaseLine::class, Block::class, BlockIngredient::class,
         PrepTemplate::class, Prep::class, MealLog::class, CustomFood::class, Substitution::class, DayPlan::class,
         PlannedSlot::class, QuickLog::class, WeightLog::class, BpLog::class, Recipe::class, SlotState::class, Dish::class,
+        Workout::class, LabResult::class, HealthDocument::class, FormDaily::class,
     ],
-    version = 3, // = AppDatabase.VERSION
+    version = 4, // = AppDatabase.VERSION
     exportSchema = true,
 )
 @TypeConverters(Converters::class)
@@ -60,11 +66,12 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun recipes(): RecipeDao
     abstract fun slotStates(): SlotStateDao
     abstract fun dishes(): DishDao
+    abstract fun health2(): Health2Dao
 
     companion object {
         const val NAME = "ration.db"
         /** Совпадает с @Database(version). */
-        const val VERSION = 3
+        const val VERSION = 4
 
         /**
          * v1 → v2 (разделы 12–18): новые поля продукта, партий, приёмов и блоков, таблица рецептов.
@@ -132,6 +139,31 @@ abstract class AppDatabase : RoomDatabase() {
                         "`unit` TEXT NOT NULL, `kcal` REAL NOT NULL, `protein` REAL NOT NULL, `tags` TEXT NOT NULL, `blockCode` TEXT NOT NULL, " +
                         "`hidden` INTEGER NOT NULL)",
                     "CREATE UNIQUE INDEX IF NOT EXISTS `index_dish_legacyBlockId_componentIndex` ON `dish` (`legacyBlockId`, `componentIndex`)",
+                ).forEach(db::execSQL)
+            }
+        }
+
+        /**
+         * v3 → v4 (раздел 20): новые таблицы тренировок, анализов, документов и кэша формы.
+         * Существующие таблицы (вес, давление, журнал, склад, свои блоки) не меняются.
+         */
+        val MIGRATION_3_4 = object : androidx.room.migration.Migration(3, 4) {
+            override fun migrate(db: androidx.sqlite.db.SupportSQLiteDatabase) {
+                listOf(
+                    "CREATE TABLE IF NOT EXISTS `workout` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `type` TEXT NOT NULL, `day` INTEGER NOT NULL, " +
+                        "`startMillis` INTEGER NOT NULL, `durationMin` REAL NOT NULL, `distanceM` REAL, `inclinePct` REAL, `speedKmh` REAL, " +
+                        "`kcalSource` TEXT NOT NULL, `kcalEntered` REAL NOT NULL, `kcalNet` REAL NOT NULL, `note` TEXT NOT NULL)",
+                    "CREATE INDEX IF NOT EXISTS `index_workout_day` ON `workout` (`day`)",
+                    "CREATE TABLE IF NOT EXISTS `lab_result` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `day` INTEGER NOT NULL, `indicator` TEXT NOT NULL, " +
+                        "`value` REAL NOT NULL, `unit` TEXT NOT NULL, `refLow` REAL, `refHigh` REAL, `documentId` INTEGER, `source` TEXT NOT NULL)",
+                    "CREATE INDEX IF NOT EXISTS `index_lab_result_day` ON `lab_result` (`day`)",
+                    "CREATE INDEX IF NOT EXISTS `index_lab_result_indicator` ON `lab_result` (`indicator`)",
+                    "CREATE TABLE IF NOT EXISTS `health_document` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `day` INTEGER NOT NULL, `type` TEXT NOT NULL, " +
+                        "`title` TEXT NOT NULL, `issuer` TEXT NOT NULL, `note` TEXT NOT NULL, `fileName` TEXT NOT NULL, `mime` TEXT NOT NULL, " +
+                        "`sizeBytes` INTEGER NOT NULL, `createdAt` INTEGER NOT NULL)",
+                    "CREATE INDEX IF NOT EXISTS `index_health_document_day` ON `health_document` (`day`)",
+                    "CREATE TABLE IF NOT EXISTS `form_daily` (`day` INTEGER NOT NULL, `bmr` REAL NOT NULL, `baseKcal` REAL NOT NULL, `workoutKcal` REAL NOT NULL, " +
+                        "`intakeKcal` REAL NOT NULL, `hasFood` INTEGER NOT NULL, `computedAt` INTEGER NOT NULL, PRIMARY KEY(`day`))",
                 ).forEach(db::execSQL)
             }
         }

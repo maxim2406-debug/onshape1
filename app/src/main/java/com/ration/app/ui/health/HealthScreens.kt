@@ -92,7 +92,13 @@ class HealthViewModel @Inject constructor(
     val nowMillis: Long get() = clock.millis()
 
     fun addWeight(kg: Double) = viewModelScope.launch { runCatching { health.addWeight(kg) }.onFailure { _messages.tryEmit(it.message ?: "Ошибка") } }
-    fun addBp(s: Int, d: Int, p: Int?) = viewModelScope.launch { runCatching { health.addBp(s, d, p) }.onFailure { _messages.tryEmit(it.message ?: "Ошибка") } }
+    fun addBp(s: Int, d: Int, p: Int?) = viewModelScope.launch {
+        runCatching { health.addBp(s, d, p) }.onFailure { _messages.tryEmit(it.message ?: "Ошибка") }.onSuccess {
+            // 20.6: срочный случай — сразу, без ожидания окон
+            val r = health.rules.bp
+            if (s >= r.urgentSys || d >= r.urgentDia) _messages.tryEmit("$s/$d. " + com.ration.app.domain.health.Trends.URGENT_TEXT)
+        }
+    }
     fun deleteWeight(w: WeightLog) = viewModelScope.launch { health.deleteWeight(w) }
     fun deleteBp(b: BpLog) = viewModelScope.launch { health.deleteBp(b) }
     fun setBpSeries(on: Boolean) = viewModelScope.launch {
@@ -178,6 +184,7 @@ fun LineChart(points: List<Pair<Float, Float>>, color: Color, modifier: Modifier
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun HealthScreen(nav: NavController, activity: MainActivity, vm: HealthViewModel = hiltViewModel()) {
     SecureScreen(activity)
@@ -185,23 +192,27 @@ fun HealthScreen(nav: NavController, activity: MainActivity, vm: HealthViewModel
     val bp by vm.bp.collectAsStateWithLifecycle()
     val s by vm.settings.collectAsStateWithLifecycle()
     val snackbar = remember { SnackbarHostState() }
-    LaunchedEffect(Unit) { vm.messages.collect { snackbar.showSnackbar(it) } }
+    LaunchedEffect(Unit) { vm.messages.collect { snackbar.showSnackbar(it, withDismissAction = true, duration = androidx.compose.material3.SnackbarDuration.Long) } }
     var kg by remember { mutableStateOf("") }
     var sys by remember { mutableStateOf("") }
     var dia by remember { mutableStateOf("") }
     var pulse by remember { mutableStateOf("") }
     val zone = java.time.ZoneId.systemDefault()
     Scaffold(topBar = { BackTopBar("Вес и давление", { nav.popBackStack() }) {
-        TextButton(onClick = { nav.navigate("nutrition") }) { Text("Питание") }
         TextButton(onClick = { nav.navigate("report") }) { Text("Отчёт") }
     } },
         snackbarHost = { SnackbarHost(snackbar) }) { pad ->
         LazyColumn(Modifier.fillMaxSize().padding(pad).padding(horizontal = 16.dp)) {
             item {
+                // 20: разделы здоровья
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    listOf("workouts" to "Тренировки", "form" to "Форма", "condition" to "Состояние", "documents" to "Документы",
+                        "nutrition" to "Питание").forEach { (r, t) -> OutlinedButton(onClick = { nav.navigate(r) }) { Text(t) } }
+                }
                 SectionTitle("Вес")
-                val goal = s.startWeightKg - s.weightLossGoalKg
+                val goal = s.targetWeight
                 val last = weights.lastOrNull()
-                Text("Цель: ${TimeUtil.num(goal)} кг (−${TimeUtil.num(s.weightLossGoalKg)} от ${TimeUtil.num(s.startWeightKg)})" +
+                Text("Цель: ${TimeUtil.num(goal)} кг" +
                     (last?.let { " · сейчас ${TimeUtil.num(it.kg)} кг, осталось ${TimeUtil.num(it.kg - goal)}" } ?: ""))
                 val r2 = HealthStats.weightRatePerWeek(weights, vm.today, 15)
                 val r4 = HealthStats.weightRatePerWeek(weights, vm.today, 29)

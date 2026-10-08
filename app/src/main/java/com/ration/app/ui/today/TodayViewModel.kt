@@ -6,7 +6,10 @@ import com.ration.app.data.db.entity.MealLog
 import com.ration.app.data.db.entity.PlannedSlot
 import com.ration.app.data.db.entity.QuickLog
 import com.ration.app.data.db.entity.SlotState
+import com.ration.app.data.repo.FormHint
+import com.ration.app.data.repo.HealthInsights
 import com.ration.app.data.repo.LogOutcome
+import com.ration.app.domain.health.HealthWarning
 import com.ration.app.data.repo.MealRepository
 import com.ration.app.data.repo.PlanRepository
 import com.ration.app.data.settings.SettingsRepository
@@ -68,8 +71,32 @@ fun LogOutcome.message(): String? {
 class TodayViewModel @Inject constructor(
     private val plans: PlanRepository,
     private val meals: MealRepository,
-    settingsRepo: SettingsRepository,
+    private val settingsRepo: SettingsRepository,
+    private val insights: HealthInsights,
 ) : ViewModel() {
+    /** 20.5: подсказка «по форме»; 20.6: карточки предупреждений. */
+    val formHint = MutableStateFlow<FormHint?>(null)
+    val healthWarnings = MutableStateFlow<List<HealthWarning>>(emptyList())
+
+    fun refreshHealth() = viewModelScope.launch {
+        formHint.value = runCatching { insights.formHint() }.getOrNull()
+        healthWarnings.value = runCatching { insights.visibleWarnings() }.getOrDefault(emptyList())
+    }
+
+    fun dismissWarning(key: String) = viewModelScope.launch { insights.dismiss(key); refreshHealth() }
+
+    /** «Сделать целью»: только по нажатию; диапазон расширяется, если ориентир за его пределами. */
+    fun applyForm() = viewModelScope.launch {
+        val t = formHint.value?.target ?: return@launch
+        val kcal = Math.round(t.kcal / 10.0).toInt() * 10
+        val protein = ((t.proteinLow + t.proteinHigh) / 2 / 5) * 5
+        settingsRepo.update {
+            it.copy(kcalTarget = kcal, kcalMin = minOf(it.kcalMin, kcal), kcalMax = maxOf(it.kcalMax, kcal),
+                proteinTarget = protein, proteinMin = minOf(it.proteinMin, t.proteinLow), proteinMax = maxOf(it.proteinMax, t.proteinHigh))
+        }
+        _messages.tryEmit("Цель дня: $kcal ккал, белок $protein г")
+    }
+
     val day = plans.today()
     private val warnings = MutableStateFlow<List<DayWarning>>(emptyList())
     private val _messages = MutableSharedFlow<String>(extraBufferCapacity = 4)

@@ -147,6 +147,10 @@ fun AppRoot(activity: MainActivity) {
                 BlockDetailScreen(nav, it.arguments?.getLong("id") ?: 0)
             }
             composable("nutrition") { com.ration.app.ui.health.NutritionScreen(nav) }
+            composable("workouts") { com.ration.app.ui.health.WorkoutsScreen(nav) }
+            composable("form") { com.ration.app.ui.health.FormScreen(nav) }
+            composable("condition") { com.ration.app.ui.health.ConditionScreen(nav, activity) }
+            composable("documents") { com.ration.app.ui.health.DocumentsScreen(nav, activity) }
             composable("library") { com.ration.app.ui.library.LibraryScreen(nav) }
             composable(
                 "cook?slot={slot}",

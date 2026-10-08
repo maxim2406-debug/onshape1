@@ -119,7 +119,7 @@ class MigrationTest {
 
         // Room открывает базу (валидация схемы), статусы и записи читаются, разбиение блюд идемпотентно
         val room = Room.databaseBuilder(context, AppDatabase::class.java, name)
-            .addMigrations(AppDatabase.MIGRATION_1_2, AppDatabase.MIGRATION_2_3).build()
+            .addMigrations(AppDatabase.MIGRATION_1_2, AppDatabase.MIGRATION_2_3, AppDatabase.MIGRATION_3_4).build()
         runBlocking {
             val states = room.slotStates().forDay(day).associateBy { it.slot }
             assertEquals(MealSlotStatus.LOGGED, states[SlotType.LUNCH]?.status)
@@ -137,13 +137,56 @@ class MigrationTest {
 
         // повторное открытие: миграция не запускается, данные те же
         val again = Room.databaseBuilder(context, AppDatabase::class.java, name)
-            .addMigrations(AppDatabase.MIGRATION_1_2, AppDatabase.MIGRATION_2_3).build()
+            .addMigrations(AppDatabase.MIGRATION_1_2, AppDatabase.MIGRATION_2_3, AppDatabase.MIGRATION_3_4).build()
         runBlocking { assertEquals(4, again.meals().getAll().size); assertEquals(1, again.dishes().getAll().size) }
         again.close()
         // копия перед миграцией делается, только если версия файла меньше текущей
         dir.deleteRecursively()
         PreMigrationBackup.run(context, name, AppDatabase.VERSION, dir)
         assertTrue(!File(dir, "pre-migration-3.db").exists())
+        assertTrue(!File(dir, "pre-migration-4.db").exists())
+    }
+
+    /**
+     * 20.8: v3 → v4 — новые таблицы (тренировки, анализы, документы, кэш формы) создаются пустыми,
+     * вес, давление, записи, остатки, свои блоки и статусы приёмов не меняются; копия файла v3 до миграции.
+     */
+    @Test fun migrate3To4KeepsEverything() {
+        helper.createDatabase(name, 2).use { seedV2(it) }
+        helper.runMigrationsAndValidate(name, 3, true, AppDatabase.MIGRATION_2_3).use { db ->
+            db.execSQL("INSERT INTO weight_log (id, day, kg) VALUES (1, $day, 101.5)")
+            db.execSQL("INSERT INTO weight_log (id, day, kg) VALUES (2, ${day + 7}, 100.8)")
+            db.execSQL("INSERT INTO bp_log (id, atMillis, systolic, diastolic, pulse) VALUES (1, 1780000000000, 132, 84, 70)")
+        }
+        PreMigrationBackup.run(context, name, AppDatabase.VERSION, dir)
+        assertTrue(File(dir, "pre-migration-3.db").exists())
+
+        val db = helper.runMigrationsAndValidate(name, 4, true, AppDatabase.MIGRATION_3_4)
+        assertEquals(2L, count(db, "SELECT COUNT(*) FROM weight_log"))
+        assertEquals(202.3, db.query("SELECT SUM(kg) FROM weight_log").use { it.moveToFirst(); it.getDouble(0) }, 1e-9)
+        assertEquals(1L, count(db, "SELECT COUNT(*) FROM bp_log WHERE systolic = 132 AND diastolic = 84"))
+        assertEquals(4L, count(db, "SELECT COUNT(*) FROM meal_log"))
+        assertEquals(1050.0, db.query("SELECT SUM(kcal) FROM meal_log").use { it.moveToFirst(); it.getDouble(0) }, 1e-9)
+        assertEquals(750.0, db.query("SELECT SUM(qty) FROM stock_item").use { it.moveToFirst(); it.getDouble(0) }, 1e-9)
+        assertEquals(1L, count(db, "SELECT COUNT(*) FROM block WHERE custom = 1"))
+        assertEquals(2L, count(db, "SELECT COUNT(*) FROM slot_state"))
+        listOf("workout", "lab_result", "health_document", "form_daily").forEach { t -> assertEquals(0L, count(db, "SELECT COUNT(*) FROM $t")) }
+        db.close()
+
+        val room = Room.databaseBuilder(context, AppDatabase::class.java, name)
+            .addMigrations(AppDatabase.MIGRATION_1_2, AppDatabase.MIGRATION_2_3, AppDatabase.MIGRATION_3_4).build()
+        runBlocking {
+            assertEquals(2, room.health().weights().size)
+            assertEquals(1, room.health().bp().size)
+            assertEquals(4, room.meals().getAll().size)
+            val id = room.health2().upsertWorkout(
+                com.ration.app.data.db.entity.Workout(type = com.ration.app.domain.model.WorkoutType.SWIM, day = day, startMillis = 1_780_000_000_000,
+                    durationMin = 40.0, distanceM = 1500.0, kcalSource = com.ration.app.domain.model.KcalSource.CALC, kcalEntered = 400.0, kcalNet = 400.0),
+            )
+            assertTrue(id > 0)
+            assertEquals(1, room.health2().workouts().size)
+        }
+        room.close()
     }
 
     @Test fun keepsLastTwoCopies() {

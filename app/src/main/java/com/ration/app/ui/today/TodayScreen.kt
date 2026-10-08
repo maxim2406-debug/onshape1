@@ -1,5 +1,10 @@
 package com.ration.app.ui.today
 
+import com.ration.app.domain.health.HealthWarning
+import com.ration.app.data.repo.FormHint
+import androidx.lifecycle.compose.LifecycleEventEffect
+import androidx.lifecycle.Lifecycle
+import androidx.compose.ui.graphics.Color
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -60,14 +65,22 @@ fun TodayScreen(nav: NavController, vm: TodayViewModel = hiltViewModel()) {
     val snackbar = remember { SnackbarHostState() }
     LaunchedEffect(Unit) { vm.messages.collect { snackbar.showSnackbar(it, withDismissAction = true, duration = SnackbarDuration.Long) } }
     val s = st.settings
+    val hint by vm.formHint.collectAsStateWithLifecycle()
+    val healthWarnings by vm.healthWarnings.collectAsStateWithLifecycle()
+    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { vm.refreshHealth() }
+    LaunchedEffect(s) { vm.refreshHealth() }
     Scaffold(
         topBar = { PlainTopBar("Сегодня, ${TimeUtil.dateRu(LocalDate.ofEpochDay(st.day))}") },
         snackbarHost = { SnackbarHost(snackbar) },
     ) { pad ->
         LazyColumn(Modifier.fillMaxSize().padding(pad).padding(horizontal = 16.dp)) {
+            items(healthWarnings, key = { "hw" + it.key }) { w -> HealthWarningCard(w) { vm.dismissWarning(w.key) } }
             item {
-                GoalProgress("Ккал", st.kcal, s.kcalTarget, "ккал", s.kcalMin..s.kcalMax)
-                GoalProgress("Белок", st.protein, s.proteinTarget, "г", s.proteinMin..s.proteinMax)
+                val t = hint?.target
+                GoalProgress("Ккал", st.kcal, s.kcalTarget, "ккал", s.kcalMin..s.kcalMax, marker = t?.kcal)
+                GoalProgress("Белок", st.protein, s.proteinTarget, "г", s.proteinMin..s.proteinMax,
+                    marker = t?.proteinLow?.toDouble(), markerHigh = t?.proteinHigh?.toDouble())
+                FormHintRow(hint, s.kcalTarget, s.proteinTarget, onApply = vm::applyForm, onProfile = { nav.navigate("settings") })
                 GoalProgress("Вода", st.waterMl, s.waterGoalMl, "мл")
                 Text("Эспрессо: ${st.espresso}", style = MaterialTheme.typography.bodySmall)
                 if (DayRules.isRedDay(st.kcal, s)) Text("● День выше нормы больше чем на 10%", color = MaterialTheme.colorScheme.error)
@@ -183,5 +196,37 @@ private fun SlotCard(c: SlotCardState, onSkip: () -> Unit, onUnskip: () -> Unit,
                 }
             }
         }
+    }
+}
+
+/** 20.5: «По форме» — ориентир на сегодня (метка на шкалах); цель меняется только кнопкой. */
+@Composable
+private fun FormHintRow(hint: FormHint?, kcalGoal: Int, proteinGoal: Int, onApply: () -> Unit, onProfile: () -> Unit) {
+    hint ?: return
+    val t = hint.target
+    if (t == null) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text("Для рекомендации не хватает: ${hint.missing.joinToString(", ")}", style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f))
+            TextButton(onClick = onProfile) { Text("Профиль") }
+        }
+        return
+    }
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Text("По форме: ${Math.round(t.kcal)} ккал (расход ${Math.round(t.tdee)} − дефицит ${Math.round(t.deficit)}), белок ${t.proteinLow}–${t.proteinHigh} г",
+            style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.tertiary, modifier = Modifier.weight(1f))
+        val same = Math.round(t.kcal / 10.0).toInt() * 10 == kcalGoal && proteinGoal in t.proteinLow..t.proteinHigh
+        if (!same) TextButton(onClick = onApply) { Text("Сделать целью") }
+    }
+}
+
+/** 20.6: срочное — красная карточка с текстом про 101; устойчивое ухудшение — жёлтая, со значениями по 3 окнам. */
+@Composable
+private fun HealthWarningCard(w: HealthWarning, onDismiss: () -> Unit) {
+    val urgent = w.urgent
+    InfoCard(w.title, container = if (urgent) Color(0xFFFFCDD2) else Color(0xFFFFF59D)) {
+        if (w.windows.size == 3) Text("3 недели назад: ${w.windows[0]} → 2 недели: ${w.windows[1]} → последняя неделя: ${w.windows[2]}",
+            style = MaterialTheme.typography.bodySmall, color = Color.Black)
+        Text(w.advice, style = MaterialTheme.typography.bodySmall, color = Color.Black)
+        if (!urgent) TextButton(onClick = onDismiss) { Text("Скрыть на 3 дня") }
     }
 }

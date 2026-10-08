@@ -43,6 +43,7 @@ class AppNotifier @Inject constructor(@ApplicationContext private val context: C
         const val BP = 15
         const val WATER = 16
         const val FISH = 17
+        const val HEALTH_WARNING = 18
         const val WARNING_BASE = 100
         const val SLOT_BASE = 1000
     }
@@ -145,6 +146,10 @@ class AppNotifier @Inject constructor(@ApplicationContext private val context: C
             .addAction(0, "Открыть чек-лист", openIntent("prep_checklist", Ids.PREP_WEEK * 10 + 1))
         post(Ids.PREP_WEEK, b)
     }
+
+    /** 20.6: общий текст без значений; подробности только в приложении. */
+    fun healthWarning() = post(Ids.HEALTH_WARNING, base(Channels.HEALTH, "Здоровье", "Есть предупреждение по показателям здоровья.", "today",
+        Ids.HEALTH_WARNING, sensitive = true))
 
     fun weigh() = post(Ids.WEIGH, base(Channels.HEALTH, "Взвешивание", "Запишите вес за эту неделю.", "health", Ids.WEIGH, sensitive = true)
         .addAction(0, "Ввести", openIntent("health", Ids.WEIGH * 10 + 1)))

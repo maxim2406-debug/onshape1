@@ -13,6 +13,9 @@ import com.ration.app.data.db.entity.BpLog
 import com.ration.app.data.db.entity.CustomFood
 import com.ration.app.data.db.entity.DayPlan
 import com.ration.app.data.db.entity.Dish
+import com.ration.app.data.db.entity.FormDaily
+import com.ration.app.data.db.entity.HealthDocument
+import com.ration.app.data.db.entity.LabResult
 import com.ration.app.data.db.entity.MealLog
 import com.ration.app.data.db.entity.PlannedSlot
 import com.ration.app.data.db.entity.Prep
@@ -26,6 +29,7 @@ import com.ration.app.data.db.entity.SlotState
 import com.ration.app.data.db.entity.StockItem
 import com.ration.app.data.db.entity.Substitution
 import com.ration.app.data.db.entity.WeightLog
+import com.ration.app.data.db.entity.Workout
 import com.ration.app.domain.model.SlotType
 import kotlinx.coroutines.flow.Flow
 
@@ -176,6 +180,34 @@ interface DishDao {
     @Insert(onConflict = OnConflictStrategy.IGNORE) suspend fun insertIgnore(list: List<Dish>): List<Long>
 }
 
+/** Раздел 20: тренировки, анализы, документы, кэш формы. */
+@Dao
+interface Health2Dao {
+    @Query("SELECT * FROM workout ORDER BY startMillis DESC") fun observeWorkouts(): Flow<List<Workout>>
+    @Query("SELECT * FROM workout ORDER BY startMillis") suspend fun workouts(): List<Workout>
+    @Query("SELECT * FROM workout WHERE day BETWEEN :from AND :to ORDER BY startMillis") suspend fun workoutsRange(from: Long, to: Long): List<Workout>
+    @Upsert suspend fun upsertWorkout(w: Workout): Long
+    @Insert suspend fun insertWorkouts(list: List<Workout>)
+    @Delete suspend fun deleteWorkout(w: Workout)
+
+    @Query("SELECT * FROM lab_result ORDER BY day DESC, indicator") fun observeLabs(): Flow<List<LabResult>>
+    @Query("SELECT * FROM lab_result ORDER BY day, indicator") suspend fun labs(): List<LabResult>
+    @Upsert suspend fun upsertLab(r: LabResult): Long
+    @Insert suspend fun insertLabs(list: List<LabResult>)
+    @Delete suspend fun deleteLab(r: LabResult)
+
+    @Query("SELECT * FROM health_document ORDER BY day DESC, id DESC") fun observeDocuments(): Flow<List<HealthDocument>>
+    @Query("SELECT * FROM health_document ORDER BY day, id") suspend fun documents(): List<HealthDocument>
+    @Query("SELECT * FROM health_document WHERE id = :id") suspend fun document(id: Long): HealthDocument?
+    @Insert suspend fun insertDocument(d: HealthDocument): Long
+    @Update suspend fun updateDocument(d: HealthDocument)
+    @Delete suspend fun deleteDocument(d: HealthDocument)
+    @Query("UPDATE lab_result SET documentId = NULL WHERE documentId = :docId") suspend fun detachLabs(docId: Long)
+
+    @Upsert suspend fun upsertForm(list: List<FormDaily>)
+    @Query("DELETE FROM form_daily") suspend fun clearForm()
+}
+
 @Dao
 interface QuickDao {
     @Query("SELECT * FROM quick_log WHERE day = :day ORDER BY atMillis") fun observeDay(day: Long): Flow<List<QuickLog>>
@@ -231,10 +263,15 @@ abstract class MaintenanceDao {
     @Query("DELETE FROM recipe") abstract suspend fun recipes()
     @Query("DELETE FROM slot_state") abstract suspend fun slotStates()
     @Query("DELETE FROM dish") abstract suspend fun dishes()
+    @Query("DELETE FROM workout") abstract suspend fun workouts()
+    @Query("DELETE FROM lab_result") abstract suspend fun labResults()
+    @Query("DELETE FROM health_document") abstract suspend fun documents()
+    @Query("DELETE FROM form_daily") abstract suspend fun formDaily()
 
     open suspend fun deleteEverything() {
         products(); stock(); purchases(); purchaseLines(); blocks(); blockIngredients(); prepTemplates(); preps()
         mealLogs(); customFoods(); substitutions(); dayPlans(); plannedSlots(); quickLogs(); weights(); bp(); recipes()
         slotStates(); dishes()
+        workouts(); labResults(); documents(); formDaily()
     }
 }

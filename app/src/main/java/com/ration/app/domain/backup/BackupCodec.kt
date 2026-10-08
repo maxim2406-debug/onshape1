@@ -6,6 +6,9 @@ import com.ration.app.data.db.entity.BpLog
 import com.ration.app.data.db.entity.CustomFood
 import com.ration.app.data.db.entity.DayPlan
 import com.ration.app.data.db.entity.Dish
+import com.ration.app.data.db.entity.HealthDocument
+import com.ration.app.data.db.entity.LabResult
+import com.ration.app.data.db.entity.Workout
 import com.ration.app.data.db.entity.SlotState
 import com.ration.app.data.db.entity.MealLog
 import com.ration.app.data.db.entity.PlannedSlot
@@ -58,7 +61,16 @@ data class BackupData(
     val slotStates: List<SlotState> = emptyList(),
     /** Отдельные блюда (схема 3): id сохраняются, на них ссылаются строки состава в журнале. */
     val dishes: List<Dish> = emptyList(),
+    /** Схема 4 (раздел 20): тренировки и показатели анализов. */
+    val workouts: List<Workout> = emptyList(),
+    val labResults: List<LabResult> = emptyList(),
+    /** Документы — только по явному выбору и только в копии с паролем (20.7). */
+    val documents: List<DocumentBlob> = emptyList(),
 )
+
+/** Документ в резервной копии: описание и содержимое (base64), расшифрованное из хранилища и зашифрованное паролем копии. */
+@Serializable
+data class DocumentBlob(val meta: HealthDocument, val base64: String)
 
 /**
  * Приведение копии прежней схемы к текущей (19.6): имена слотов SNACK_1/SNACK_2/ROAD_BAR читает [com.ration.app.domain.model.SlotTypeSerializer];
@@ -106,8 +118,9 @@ class BackupException(message: String) : Exception(message)
 
 object BackupCodec {
     const val FORMAT = "ration-backup"
-    const val SCHEMA_VERSION = 3
-    const val MAX_BYTES = 20_000_000
+    const val SCHEMA_VERSION = 4
+    /** С документами копия больше: до 80 МБ. */
+    const val MAX_BYTES = 80_000_000
     private const val PBKDF2_ITERATIONS = 210_000
     private const val KEY_BITS = 256
     private const val GCM_TAG_BITS = 128
@@ -120,6 +133,8 @@ object BackupCodec {
     }
 
     fun encode(data: BackupData, password: CharArray?): String {
+        // 20.7: документы — только в зашифрованной копии
+        if (data.documents.isNotEmpty() && (password == null || password.isEmpty())) throw BackupException("Документы экспортируются только с паролем")
         val plain = json.encodeToString(BackupData.serializer(), data)
         val env = if (password == null || password.isEmpty()) {
             BackupEnvelope(encrypted = false, payload = plain)
@@ -239,6 +254,11 @@ object BackupCodec {
             check(it.productId == null || it.productId in productIds, "продукт блюда ${it.id}")
         }
         d.mealLogs.forEach { l -> check(l.autoSkipped.size <= 6, "автопропуск приёма ${l.id}") }
+        d.workouts.forEach { check(it.durationMin in 0.0..600.0 && finite(it.kcalNet) && it.kcalNet in 0.0..5000.0, "тренировка ${it.id}") }
+        d.labResults.forEach { check(it.indicator.isNotBlank() && it.indicator.length <= 100 && finite(it.value), "показатель ${it.id}") }
+        d.documents.forEach {
+            check(it.meta.mime in setOf("application/pdf", "image/jpeg", "image/png") && it.base64.length <= 28_000_000, "документ ${it.meta.id}")
+        }
         d.bp.forEach { check(it.systolic in 40..300 && it.diastolic in 20..200 && (it.pulse == null || it.pulse in 20..250), "давление ${it.id}") }
     }
 

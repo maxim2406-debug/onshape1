@@ -1,6 +1,9 @@
 package com.ration.app.ui.components
 
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -109,7 +112,11 @@ fun RangeProgress(label: String, value: Double, min: Int, max: Int, unit: String
  * Цель дня (19.8): цель, текущее значение, остаток и полоса прогресса. [range] — допустимый диапазон, если есть.
  */
 @Composable
-fun GoalProgress(label: String, value: Double, goal: Int, unit: String, range: IntRange? = null) {
+fun GoalProgress(
+    label: String, value: Double, goal: Int, unit: String, range: IntRange? = null,
+    /** 20.5: тонкая метка «по форме» (одно значение или диапазон [marker]..[markerHigh]) — только подсказка, цель не меняет. */
+    marker: Double? = null, markerHigh: Double? = null,
+) {
     val over = range != null && value > range.last
     val reached = value >= (range?.first ?: goal)
     val color = when {
@@ -132,11 +139,24 @@ fun GoalProgress(label: String, value: Double, goal: Int, unit: String, range: I
             )
         }
         Spacer(Modifier.height(4.dp))
-        LinearProgressIndicator(
-            progress = { (value / maxOf(goal, 1)).toFloat().coerceIn(0f, 1f) },
-            modifier = Modifier.fillMaxWidth().height(8.dp),
-            color = color,
-        )
+        val scale = maxOf(goal.toDouble(), markerHigh ?: marker ?: 0.0, 1.0) * if (marker != null) 1.05 else 1.0
+        Box(Modifier.fillMaxWidth().height(14.dp), contentAlignment = Alignment.Center) {
+            LinearProgressIndicator(
+                progress = { (value / scale).toFloat().coerceIn(0f, 1f) },
+                modifier = Modifier.fillMaxWidth().height(8.dp),
+                color = color,
+            )
+            if (marker != null) {
+                val markColor = MaterialTheme.colorScheme.tertiary
+                Canvas(Modifier.fillMaxWidth().height(14.dp)) {
+                    val x0 = (marker / scale).toFloat().coerceIn(0f, 1f) * size.width
+                    val x1 = ((markerHigh ?: marker) / scale).toFloat().coerceIn(0f, 1f) * size.width
+                    if (x1 - x0 > 2f) drawRect(markColor.copy(alpha = 0.35f), Offset(x0, 0f), Size(x1 - x0, size.height))
+                    drawLine(markColor, Offset(x0, 0f), Offset(x0, size.height), strokeWidth = 3f)
+                    if (x1 - x0 > 2f) drawLine(markColor, Offset(x1, 0f), Offset(x1, size.height), strokeWidth = 3f)
+                }
+            }
+        }
     }
 }
 

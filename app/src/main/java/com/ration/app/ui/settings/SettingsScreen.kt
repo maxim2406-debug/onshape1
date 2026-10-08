@@ -1,5 +1,8 @@
 package com.ration.app.ui.settings
 
+import com.ration.app.ui.components.toNumberOrNull
+import com.ration.app.domain.model.Sex
+import androidx.compose.material3.Checkbox
 import android.Manifest
 import android.content.Context
 import android.content.Intent
@@ -107,8 +110,8 @@ class SettingsViewModel @Inject constructor(
 
     fun setApiKey(k: String?) { keys.setApiKey(k); if (k.isNullOrBlank()) update { it.copy(claudeApiEnabled = false) } }
 
-    fun export(uri: Uri, password: String) = viewModelScope.launch {
-        runCatching { backup.export(uri, password.takeIf { it.isNotEmpty() }?.toCharArray()) }
+    fun export(uri: Uri, password: String, includeDocuments: Boolean) = viewModelScope.launch {
+        runCatching { backup.export(uri, password.takeIf { it.isNotEmpty() }?.toCharArray(), includeDocuments && password.isNotEmpty()) }
             .onSuccess { _messages.tryEmit("Резервная копия сохранена") }
             .onFailure { _messages.tryEmit("Ошибка экспорта: ${it.message}") }
     }
@@ -143,8 +146,9 @@ fun SettingsScreen(nav: NavController, vm: SettingsViewModel = hiltViewModel()) 
     val notifPerm = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { refresh++ }
     var backupPassword by remember { mutableStateOf("") }
     var showExportWarning by remember { mutableStateOf(false) }
+    var withDocs by remember { mutableStateOf(false) }
     var confirmDelete by remember { mutableStateOf(false) }
-    val exportLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri -> uri?.let { vm.export(it, backupPassword) } }
+    val exportLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri -> uri?.let { vm.export(it, backupPassword, withDocs) } }
     val importLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri -> uri?.let { vm.import(it, backupPassword) } }
 
     Scaffold(topBar = { BackTopBar("Настройки", { nav.popBackStack() }) }, snackbarHost = { SnackbarHost(snackbar) }) { pad ->
@@ -183,6 +187,20 @@ fun SettingsScreen(nav: NavController, vm: SettingsViewModel = hiltViewModel()) 
                     if (list.isNotEmpty()) vm.update { it.copy(vegQuickGrams = list) }
                 }) { Text("OK") }
             }
+
+            SectionTitle("Профиль (для расчёта формы)")
+            // 20.1: значения не придумываются; пустой вес — расчёт не выполняется
+            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                Sex.entries.forEach { x -> FilterChip(s.sex == x, { vm.update { it.copy(sex = x) } }, { Text(x.label) }) }
+            }
+            IntRow("Возраст, лет", s.ageYears) { v -> vm.update { it.copy(ageYears = v.coerceIn(14, 110)) } }
+            IntRow("Рост, см", s.heightCm) { v -> if (v in 100..250) vm.update { it.copy(heightCm = v) } }
+            DecRow("Целевой вес, кг", s.targetWeight) { v -> if (v in 30.0..300.0) vm.update { it.copy(targetWeightKg = v) } }
+            DecRow("Коэффициент активности (PAL) 1,2–1,5", s.pal) { v -> if (v in 1.2..1.5) vm.update { it.copy(pal = v) } }
+            Text("1,2 — сидячая работа; 1,3 — немного ходьбы; 1,4–1,5 — много на ногах. Тренировки считаются отдельно.",
+                style = MaterialTheme.typography.bodySmall)
+            DecRow("Темп снижения, кг/нед", s.lossPaceKgPerWeek) { v -> if (v in 0.1..1.0) vm.update { it.copy(lossPaceKgPerWeek = v) } }
+            Text("Текущий вес берётся из журнала «Вес и давление».", style = MaterialTheme.typography.bodySmall)
 
             SectionTitle("Время приёмов")
             // 19.8: одно расписание шести приёмов, без типов дня
@@ -241,6 +259,12 @@ fun SettingsScreen(nav: NavController, vm: SettingsViewModel = hiltViewModel()) 
                 visualTransformation = PasswordVisualTransformation(), singleLine = true, modifier = Modifier.fillMaxWidth(),
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password))
             Text("Пароль нигде не сохраняется. Без него зашифрованную копию не восстановить.", style = MaterialTheme.typography.bodySmall)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Checkbox(withDocs && backupPassword.isNotEmpty(), { withDocs = it }, enabled = backupPassword.isNotEmpty())
+                Text("Включить документы (только с паролем)")
+            }
+            Text("Тренировки и анализы входят в копию всегда; файлы документов — только по этой отметке и только в зашифрованной копии.",
+                style = MaterialTheme.typography.bodySmall)
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(vertical = 8.dp)) {
                 Button(onClick = { showExportWarning = true }) { Text("Экспорт") }
                 OutlinedButton(onClick = { importLauncher.launch(arrayOf("application/json", "text/plain", "application/octet-stream")) }) { Text("Импорт") }
@@ -255,7 +279,7 @@ fun SettingsScreen(nav: NavController, vm: SettingsViewModel = hiltViewModel()) 
 
     if (showExportWarning) ConfirmDialog(
         "Данные о здоровье",
-        "Файл будет содержать вес, давление и журнал питания" + (if (backupPassword.isEmpty()) " в открытом виде. Задайте пароль, чтобы зашифровать копию." else ", зашифрованные паролем.") +
+        "Файл будет содержать вес, давление, тренировки, анализы и журнал питания" + (if (withDocs && backupPassword.isNotEmpty()) ", файлы документов" else "") + (if (backupPassword.isEmpty()) " в открытом виде. Задайте пароль, чтобы зашифровать копию." else ", зашифрованные паролем.") +
             " Храните его в надёжном месте.",
         confirm = "Экспортировать",
         onConfirm = { exportLauncher.launch("ration-backup.json") },
@@ -263,7 +287,7 @@ fun SettingsScreen(nav: NavController, vm: SettingsViewModel = hiltViewModel()) 
     )
     if (confirmDelete) ConfirmDialog(
         "Удалить все данные?",
-        "Будут удалены база, настройки, API-ключ и файлы отчётов. Справочники засеются заново. Действие необратимо.",
+        "Будут удалены база, настройки, API-ключ, файлы отчётов и документы (с затиранием). Справочники засеются заново. Действие необратимо.",
         confirm = "Удалить", onConfirm = vm::deleteAll, onDismiss = { confirmDelete = false },
     )
 }
@@ -278,6 +302,12 @@ private fun PermissionRow(title: String, ok: Boolean, whenOff: String, onRequest
         }
         if (!ok) TextButton(onClick = onRequest) { Text("Разрешить") }
     }
+}
+
+@Composable
+private fun DecRow(label: String, value: Double, onChange: (Double) -> Unit) {
+    var text by remember(value) { mutableStateOf(TimeUtil.num(value, 2)) }
+    NumberField(label, text, { v -> text = v; v.toNumberOrNull()?.let(onChange) }, Modifier.fillMaxWidth().padding(vertical = 2.dp))
 }
 
 @Composable

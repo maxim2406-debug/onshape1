@@ -7,6 +7,7 @@ import com.ration.app.data.db.AppDatabase
 import com.ration.app.data.settings.SecureKeyStore
 import com.ration.app.data.settings.SettingsRepository
 import com.ration.app.domain.backup.BackupCodec
+import com.ration.app.domain.backup.DocumentBlob
 import com.ration.app.domain.backup.BackupData
 import com.ration.app.domain.backup.BackupException
 import com.ration.app.notifications.ReminderScheduler
@@ -27,9 +28,10 @@ class BackupRepository @Inject constructor(
     private val scheduler: ReminderScheduler,
     private val catalog: CatalogRepository,
     private val plans: PlanRepository,
+    private val docs: DocumentStore,
     private val clock: Clock,
 ) {
-    suspend fun snapshot(): BackupData = BackupData(
+    suspend fun snapshot(includeDocuments: Boolean = false): BackupData = BackupData(
         exportedAtMillis = clock.millis(),
         settings = settings.current(),
         products = db.products().getAll(),
@@ -51,11 +53,17 @@ class BackupRepository @Inject constructor(
         recipes = db.recipes().getAll().filter { it.source == "user" },
         slotStates = db.slotStates().getAll(),
         dishes = db.dishes().getAll(),
+        workouts = db.health2().workouts(),
+        labResults = db.health2().labs(),
+        documents = if (includeDocuments) db.health2().documents().map { d ->
+            DocumentBlob(d, java.util.Base64.getEncoder().encodeToString(docs.read(d.fileName)))
+        } else emptyList(),
     )
 
     /** Экспорт в файл, выбранный пользователем (SAF). Ключ API не экспортируется. */
-    suspend fun export(uri: Uri, password: CharArray?) = withContext(Dispatchers.IO) {
-        val text = BackupCodec.encode(snapshot(), password)
+    suspend fun export(uri: Uri, password: CharArray?, includeDocuments: Boolean = false) = withContext(Dispatchers.IO) {
+        if (includeDocuments && (password == null || password.isEmpty())) throw BackupException("Документы экспортируются только с паролем")
+        val text = BackupCodec.encode(snapshot(includeDocuments), password)
         context.contentResolver.openOutputStream(uri, "wt")?.use { it.write(text.toByteArray(Charsets.UTF_8)) }
             ?: throw BackupException("Не удалось открыть файл для записи")
     }
@@ -93,6 +101,14 @@ class BackupRepository @Inject constructor(
             db.recipes().upsertAll(d.recipes.map { it.copy(source = "user") })
             db.slotStates().insertAll(d.slotStates)
             db.dishes().insertIgnore(d.dishes)
+            db.health2().insertWorkouts(d.workouts)
+            db.health2().insertLabs(d.labResults)
+        }
+        // документы: прежние файлы затираются, из копии — заново в зашифрованное хранилище с теми же id
+        docs.wipeAll()
+        d.documents.forEach { b ->
+            val name = docs.write(java.util.Base64.getDecoder().decode(b.base64))
+            db.health2().insertDocument(b.meta.copy(fileName = name))
         }
         catalog.ensureSeeded()
         catalog.forceCookbookSync()
@@ -106,6 +122,7 @@ class BackupRepository @Inject constructor(
     suspend fun deleteAll() {
         scheduler.cancelAll()
         db.withTransaction { db.maintenance().deleteEverything() }
+        docs.wipeAll()
         withContext(Dispatchers.IO) { File(context.cacheDir, "reports").deleteRecursively() }
         settings.clearAll()
         keyStore.clear()
